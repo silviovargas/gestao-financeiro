@@ -28,7 +28,7 @@ Sistema financeiro completo para pequenas empresas. Controle de contas, lançame
 ### Instalar
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/SEU_USUARIO/gestao-financeiro/main/install.sh | bash -s gestao.suaempresa.com.br email@suaempresa.com.br
+curl -sSL https://raw.githubusercontent.com/silviovargas/gestao-financeiro/main/install.sh | bash -s gestao.suaempresa.com.br email@suaempresa.com.br
 ```
 
 Após alguns minutos, acesse `https://gestao.suaempresa.com.br`
@@ -52,7 +52,7 @@ cd ~/gestao-financeiro && bash update.sh
 Para rodar na rede local sem HTTPS:
 
 ```bash
-git clone https://github.com/SEU_USUARIO/gestao-financeiro
+git clone https://github.com/silviovargas/gestao-financeiro
 cd gestao-financeiro
 cp .env.example .env
 # Edite o .env se necessário

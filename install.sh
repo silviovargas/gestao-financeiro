@@ -8,7 +8,7 @@ set -e
 DOMAIN=$1
 EMAIL=$2
 INSTALL_DIR="$HOME/gestao-financeiro"
-REPO="https://github.com/SEU_USUARIO/gestao-financeiro"
+REPO="https://github.com/silviovargas/gestao-financeiro"
 
 # Verificar argumentos
 if [ -z "$DOMAIN" ] || [ -z "$EMAIL" ]; then
