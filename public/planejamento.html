@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planejamento — Gestão Financeira SL</title>
+<link rel="stylesheet" href="/css/global.css">
+<style>
+/* SCORE */
+.score-ring{position:relative;width:120px;height:120px;flex-shrink:0;}
+.score-svg{transform:rotate(-90deg);}
+.score-num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:28px;font-weight:800;line-height:1;}
+.score-lbl{font-size:11px;font-weight:600;margin-top:3px;}
+.score-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;display:flex;gap:1.25rem;align-items:flex-start;margin-bottom:1.25rem;}
+.score-items{flex:1;}
+.score-item{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.score-item:last-child{border-bottom:none;}
+.score-item-label{flex:1;font-weight:500;}
+.score-item-detail{color:var(--muted);font-size:11px;}
+
+/* DÍVIDAS */
+.debt-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:.75rem;}
+.debt-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;}
+.debt-name{font-size:13px;font-weight:600;}
+.debt-bank{font-size:11px;color:var(--muted);}
+.debt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:.75rem;}
+.debt-stat{text-align:center;}
+.debt-stat-val{font-size:16px;font-weight:700;}
+.debt-stat-lbl{font-size:10px;color:var(--muted);}
+.debt-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:.5rem;}
+.debt-bar-fill{height:100%;border-radius:3px;background:var(--red);transition:width .4s;}
+.debt-timeline{font-size:11px;color:var(--muted);}
+
+/* METAS / CAIXINHAS */
+.goal-card{background:var(--surface);border:1px solid var(--border);border-left:4px solid;border-radius:var(--radius);padding:1rem;margin-bottom:.75rem;}
+.goal-header{display:flex;align-items:center;gap:10px;margin-bottom:.75rem;}
+.goal-icon{font-size:24px;}
+.goal-info{flex:1;}
+.goal-name{font-size:13px;font-weight:600;}
+.goal-meta{font-size:11px;color:var(--muted);margin-top:2px;}
+.goal-progress{margin-bottom:.5rem;}
+.goal-bar{height:8px;background:var(--border);border-radius:4px;overflow:hidden;margin:.5rem 0;}
+.goal-bar-fill{height:100%;border-radius:4px;transition:width .4s;}
+.goal-row{display:flex;justify-content:space-between;font-size:12px;}
+.goal-monthly{background:var(--primary-l);border:1px solid var(--primary-b);border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--primary);text-align:center;}
+
+/* FLUXO */
+.cashflow-table{width:100%;border-collapse:collapse;font-size:12px;}
+.cashflow-table th{padding:8px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-bottom:2px solid var(--border);white-space:nowrap;font-weight:700;}
+.cashflow-table th.num,.cashflow-table td.num{text-align:right;}
+.cashflow-table td{padding:8px 10px;border-bottom:1px solid var(--border);}
+.cashflow-table tr:last-child td{border-bottom:none;}
+.cashflow-table tr:hover td{background:var(--bg);}
+.cashflow-table tr.current-month td{background:var(--primary-l);font-weight:600;}
+.cashflow-mini{height:6px;width:100%;background:var(--border);border-radius:3px;overflow:hidden;margin-top:3px;}
+.cashflow-mini-fill{height:100%;border-radius:3px;}
+
+/* CHAT IA */
+.chat-wrap{display:flex;flex-direction:column;height:420px;}
+.chat-msgs{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:10px;}
+.msg{max-width:85%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.55;}
+.msg.user{align-self:flex-end;background:var(--primary);color:#fff;border-radius:12px 12px 2px 12px;}
+.msg.ai{align-self:flex-start;background:var(--bg);border:1px solid var(--border);border-radius:12px 12px 12px 2px;white-space:pre-wrap;}
+.msg.ai.loading{color:var(--muted);font-style:italic;}
+.chat-input-row{display:flex;gap:8px;padding:1rem;border-top:1px solid var(--border);}
+.chat-input{flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;outline:none;resize:none;min-height:42px;max-height:120px;}
+.chat-input:focus{border-color:var(--primary);}
+.chat-send{background:var(--primary);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:14px;cursor:pointer;flex-shrink:0;transition:opacity .15s;}
+.chat-send:hover{opacity:.85;}
+.chat-send:disabled{opacity:.4;cursor:not-allowed;}
+.chat-suggestions{display:flex;gap:6px;flex-wrap:wrap;padding:0 1rem .75rem;}
+.chat-sug{background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:inherit;transition:all .15s;color:var(--muted);}
+.chat-sug:hover{background:var(--primary-l);border-color:var(--primary-b);color:var(--primary);}
+
+/* SIMUL */
+.simul-row{display:flex;gap:10px;align-items:flex-end;margin-bottom:1rem;flex-wrap:wrap;}
+.simul-result{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;}
+.simul-stat{text-align:center;}
+.simul-stat-val{font-size:18px;font-weight:700;color:var(--primary);}
+.simul-stat-lbl{font-size:10px;color:var(--muted);}
+
+/* GROQ KEY */
+.key-form{background:var(--amber-l);border:1px solid var(--amber-b);border-radius:var(--radius);padding:1rem;margin-bottom:1.25rem;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;}
+.key-form.ok{background:var(--green-l);border-color:var(--green-b);}
+</style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-content">
+    <div class="page-header">
+      <h1>🧠 Planejamento Inteligente</h1>
+      <div class="page-header-actions">
+        <button class="btn btn-secondary btn-sm" onclick="openNewDebt()">+ Dívida</button>
+        <button class="btn btn-secondary btn-sm" onclick="openNewGoal()">+ Meta</button>
+      </div>
+    </div>
+    <div class="page-body">
+
+      <!-- TABS -->
+      <div class="tab-bar">
+        <button class="tab-btn active" id="vt-saude"     onclick="showTab('saude')">💊 Saúde</button>
+        <button class="tab-btn"        id="vt-dividas"   onclick="showTab('dividas')">💳 Dívidas</button>
+        <button class="tab-btn"        id="vt-caixinhas" onclick="showTab('caixinhas')">🪣 Caixinhas</button>
+        <button class="tab-btn"        id="vt-fluxo"     onclick="showTab('fluxo')">📅 Fluxo</button>
+        <button class="tab-btn"        id="vt-ia"        onclick="showTab('ia')">🤖 Assistente IA</button>
+      </div>
+
+      <!-- ── SAÚDE ─────────────────────────────────────── -->
+      <div id="tab-saude">
+        <div class="score-card" id="scoreCard">
+          <div class="score-ring" id="scoreRing">
+            <svg class="score-svg" width="120" height="120" viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="52" fill="none" stroke="var(--border)" stroke-width="10"/>
+              <circle id="scoreArc" cx="60" cy="60" r="52" fill="none" stroke="#888" stroke-width="10" stroke-dasharray="0 327" stroke-linecap="round"/>
+            </svg>
+            <div class="score-num"><span id="scoreNum">—</span><span class="score-lbl" id="scoreLbl">—</span></div>
+          </div>
+          <div class="score-items" id="scoreItems">
+            <div style="color:var(--muted);font-size:13px;padding:1rem">Carregando...</div>
+          </div>
+        </div>
+
+        <!-- KPIs rápidos -->
+        <div class="kpi-grid" id="scoreKPIs" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">
+          <div class="kpi-card"><div class="kpi-label">Saldo total</div><div class="kpi-val kpi-neutral" id="skBal">—</div></div>
+          <div class="kpi-card"><div class="kpi-label">Média receita</div><div class="kpi-val kpi-positive" id="skInc">—</div><div class="kpi-sub">3 meses</div></div>
+          <div class="kpi-card"><div class="kpi-label">Média despesa</div><div class="kpi-val kpi-negative" id="skExp">—</div><div class="kpi-sub">3 meses</div></div>
+          <div class="kpi-card"><div class="kpi-label">Total dívidas</div><div class="kpi-val" style="color:var(--red)" id="skDebt">—</div></div>
+          <div class="kpi-card"><div class="kpi-label">Reservas acum.</div><div class="kpi-val kpi-positive" id="skGoal">—</div></div>
+        </div>
+
+        <!-- Simulador de quitação -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">⚡ Simulador — E se pagar R$ X a mais?</span></div>
+          <div class="card-body">
+            <div class="simul-row">
+              <div class="field" style="margin:0;flex:1">
+                <label class="lbl">Selecionar dívida</label>
+                <select id="simDebt" style="padding:8px 10px"></select>
+              </div>
+              <div class="field" style="margin:0;width:160px">
+                <label class="lbl">Valor extra por mês (R$)</label>
+                <input type="number" id="simExtra" value="200" step="50" min="0" style="padding:8px 10px">
+              </div>
+              <button class="btn btn-primary" onclick="runSimulation()">Simular</button>
+            </div>
+            <div class="simul-result" id="simResult" style="display:none"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── DÍVIDAS ────────────────────────────────────── -->
+      <div id="tab-dividas" style="display:none">
+        <div id="debtList"><div class="empty-state" style="padding:2rem"><div class="empty-state-icon">💳</div><p>Carregando...</p></div></div>
+
+        <div class="card" style="margin-top:1rem">
+          <div class="card-header"><span class="card-title">📊 Estratégia de quitação</span></div>
+          <div class="card-body" id="debtStrategy">
+            <div style="color:var(--muted);font-size:13px">Carregando análise...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CAIXINHAS ──────────────────────────────────── -->
+      <div id="tab-caixinhas" style="display:none">
+        <div style="background:var(--primary-l);border:1px solid var(--primary-b);border-radius:var(--radius);padding:12px 14px;margin-bottom:1rem;font-size:12px;color:var(--primary);line-height:1.5">
+          <strong>💡 Caixinhas = reservas com propósito.</strong> Cada meta tem um valor mensal a guardar. Ao dar baixa num depósito, registre como lançamento na conta de investimento correspondente e atualize o valor aqui.
+        </div>
+        <div id="goalList"><div class="empty-state" style="padding:2rem"><div class="empty-state-icon">🪣</div><p>Carregando...</p></div></div>
+        <div class="card" style="margin-top:1rem">
+          <div class="card-header"><span class="card-title">📋 Resumo mensal das caixinhas</span></div>
+          <div class="card-body" id="goalSummary"></div>
+        </div>
+      </div>
+
+      <!-- ── FLUXO DE CAIXA ─────────────────────────────── -->
+      <div id="tab-fluxo" style="display:none">
+        <div class="card">
+          <div class="card-header"><span class="card-title">📅 Fluxo de caixa — 14 meses</span><span style="font-size:11px;color:var(--muted)">2 meses passados + mês atual + 11 futuros</span></div>
+          <div style="overflow-x:auto">
+            <table class="cashflow-table">
+              <thead>
+                <tr>
+                  <th>Mês</th>
+                  <th class="num">Receitas</th>
+                  <th class="num">Despesas</th>
+                  <th class="num">Pendente</th>
+                  <th class="num">Resultado</th>
+                  <th>Barra</th>
+                </tr>
+              </thead>
+              <tbody id="cashflowBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ASSISTENTE IA ───────────────────────────────── -->
+      <div id="tab-ia" style="display:none">
+        <!-- Configuração da chave -->
+        <div id="groqKeyPanel" class="key-form">
+          <div class="field" style="margin:0;flex:1">
+            <label class="lbl">🔑 Chave da API Groq (gratuita)</label>
+            <input type="password" id="groqKeyInput" placeholder="gsk_xxxxxxxxxxxx" style="padding:8px 10px">
+            <div class="field-hint">Crie em <a href="https://console.groq.com/keys" target="_blank" style="color:var(--primary)">console.groq.com</a> — 100% gratuito, sem cartão</div>
+          </div>
+          <button class="btn btn-primary" onclick="saveGroqKey()">Salvar chave</button>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">🤖 Assistente Financeiro</span>
+            <span style="font-size:11px;color:var(--muted)">Powered by Llama 3.3 70B (Groq)</span>
+          </div>
+          <div class="chat-wrap">
+            <div class="chat-msgs" id="chatMsgs">
+              <div class="msg ai">Olá! Sou seu assistente financeiro. Tenho acesso aos seus dados reais — saldo, dívidas, metas e lançamentos. Como posso ajudar?
+
+Você pode me perguntar sobre:
+• Como quitar as dívidas mais rápido
+• Se está no caminho certo para as reservas
+• Como otimizar seus gastos
+• Planejamento para os próximos meses</div>
+            </div>
+            <div class="chat-suggestions">
+              <button class="chat-sug" onclick="sendSuggestion(this)">Analise minha saúde financeira</button>
+              <button class="chat-sug" onclick="sendSuggestion(this)">Qual dívida quitar primeiro?</button>
+              <button class="chat-sug" onclick="sendSuggestion(this)">Estou no caminho para a reserva de emergência?</button>
+              <button class="chat-sug" onclick="sendSuggestion(this)">Como sobrar mais dinheiro todo mês?</button>
+              <button class="chat-sug" onclick="sendSuggestion(this)">Quanto tempo para quitar tudo?</button>
+            </div>
+            <div class="chat-input-row">
+              <textarea class="chat-input" id="chatInput" placeholder="Faça uma pergunta financeira..." rows="1" onkeydown="handleChatKey(event)"></textarea>
+              <button class="chat-send" id="chatSend" onclick="sendChat()">➤</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DÍVIDA -->
+<div class="overlay" id="debtModal" onclick="closeOnOverlay(event)">
+  <div class="modal" style="max-width:420px">
+    <h3 id="debtModalTitle">Nova dívida</h3>
+    <input type="hidden" id="dmId">
+    <div class="field"><label class="lbl">Nome</label><input type="text" id="dmName" placeholder="Ex: Empréstimo SICOOB, Cartão, Financiamento..."></div>
+    <div class="field"><label class="lbl">Banco / Credor</label><input type="text" id="dmBank" placeholder="Ex: SICOOB, Fundo SP, Nubank..."></div>
+    <div class="field-row">
+      <div class="field"><label class="lbl">Saldo devedor atual (R$)</label><input type="number" id="dmBalance" step="0.01" min="0"></div>
+      <div class="field"><label class="lbl">Parcela mensal (R$)</label><input type="number" id="dmPayment" step="0.01" min="0"></div>
+    </div>
+    <div class="field"><label class="lbl">Taxa de juros mensal (%)</label><input type="number" id="dmRate" step="0.01" min="0" value="0" placeholder="Ex: 1.8"><div class="field-hint">Deixe 0 se não souber</div></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('debtModal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveDebt()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL META -->
+<div class="overlay" id="goalModal" onclick="closeOnOverlay(event)">
+  <div class="modal" style="max-width:420px">
+    <h3 id="goalModalTitle">Nova meta / caixinha</h3>
+    <input type="hidden" id="gmId">
+    <div class="field"><label class="lbl">Nome</label><input type="text" id="gmName" placeholder="Ex: Reserva emergência, Viagem, Equipamento..."></div>
+    <div class="field-row">
+      <div class="field"><label class="lbl">Meta total (R$)</label><input type="number" id="gmTarget" step="0.01" min="0"></div>
+      <div class="field"><label class="lbl">Já guardado (R$)</label><input type="number" id="gmCurrent" step="0.01" min="0" value="0"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label class="lbl">Guardar por mês (R$)</label><input type="number" id="gmMonthly" step="0.01" min="0"></div>
+      <div class="field"><label class="lbl">Data alvo</label><input type="month" id="gmDate"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label class="lbl">PF / PJ</label><select id="gmOwner"><option value="pj">Empresa (PJ)</option><option value="pf">Pessoa Física (PF)</option></select></div>
+      <div class="field"><label class="lbl">Ícone</label><input type="text" id="gmIcon" value="🪣" style="font-size:20px;text-align:center"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('goalModal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveGoal()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/shared.js"></script>
+<script>
+if (!Auth.requireLogin()) throw '';
+if (!Auth.hasPerm('finance','view')) { window.location.href='/home'; throw ''; }
+buildSidebar('planejamento');
+
+let debts=[], goals=[], scoreData=null, cashflow=[];
+const chatHistory = [];
+const thisMonth = currentMonth();
+
+// ── INIT ──────────────────────────────────────────────────
+async function init() {
+  await Promise.all([loadScore(), loadDebts(), loadGoals(), loadCashflow(), checkGroqKey()]);
+}
+
+// ── SCORE ─────────────────────────────────────────────────
+async function loadScore() {
+  try {
+    scoreData = await API.get('/planning/score');
+    renderScore();
+    renderSimDebt();
+    renderDebtStrategy();
+  } catch {}
+}
+
+function renderScore() {
+  if (!scoreData) return;
+  const s = scoreData.score;
+  const arc = document.getElementById('scoreArc');
+  const circ = 2 * Math.PI * 52;
+  arc.setAttribute('stroke-dasharray', `${s/100*circ} ${circ}`);
+  arc.setAttribute('stroke', scoreData.color);
+  document.getElementById('scoreNum').textContent = s;
+  document.getElementById('scoreNum').style.color = scoreData.color;
+  document.getElementById('scoreLbl').textContent = scoreData.label;
+
+  document.getElementById('scoreItems').innerHTML = scoreData.items.map(it =>
+    '<div class="score-item"><span style="font-size:16px">'+it.icon+'</span><div><div class="score-item-label">'+it.label+'</div><div class="score-item-detail">'+it.detail+'</div></div><span style="font-size:11px;color:var(--muted);margin-left:auto">'+(it.pts>0?'+':'')+it.pts+'</span></div>'
+  ).join('');
+
+  document.getElementById('skBal').textContent  = Fmt.brl(scoreData.bal);
+  document.getElementById('skInc').textContent  = Fmt.brl(scoreData.avgInc);
+  document.getElementById('skExp').textContent  = Fmt.brl(scoreData.avgExp);
+  document.getElementById('skDebt').textContent = Fmt.brl(scoreData.debtTotal);
+  document.getElementById('skGoal').textContent = Fmt.brl(scoreData.goalSaved);
+}
+
+// ── DÍVIDAS ────────────────────────────────────────────────
+async function loadDebts() {
+  try {
+    debts = await API.get('/planning/debts');
+    renderDebts();
+  } catch {}
+}
+
+function renderDebts() {
+  const el = document.getElementById('debtList');
+  if (!debts.length) {
+    el.innerHTML = '<div class="empty-state" style="padding:2rem"><div class="empty-state-icon">🎉</div><p>Nenhuma dívida cadastrada!</p><button class="btn btn-primary" style="margin-top:1rem" onclick="openNewDebt()">+ Cadastrar dívida</button></div>';
+    return;
+  }
+  el.innerHTML = debts.map(d => {
+    const rate   = d.interest_rate || 0;
+    const months = rate > 0
+      ? Math.ceil(Math.log(d.monthly_payment / (d.monthly_payment - d.current_balance * rate/100)) / Math.log(1 + rate/100))
+      : Math.ceil(d.current_balance / d.monthly_payment);
+    const total  = d.monthly_payment * months;
+    const juros  = total - d.current_balance;
+    const pctPago = d.initial_amount > 0 ? Math.max(0, Math.min(100, (1 - d.current_balance/d.initial_amount)*100)) : 0;
+    const dataQuit = new Date(); dataQuit.setMonth(dataQuit.getMonth() + months);
+    return '<div class="debt-card">'+
+      '<div class="debt-header">'+
+        '<div><div class="debt-name">'+d.name+'</div><div class="debt-bank">'+(d.bank||'')+'</div></div>'+
+        '<div style="display:flex;gap:6px">'+
+          (Auth.hasPerm('finance','edit') ? '<button class="btn-icon" onclick="openEditDebt('+d.id+')">✏️</button>' : '')+
+          (Auth.hasPerm('finance','delete') ? '<button class="btn-icon" style="color:var(--red)" onclick="deleteDebt('+d.id+')">🗑️</button>' : '')+
+        '</div>'+
+      '</div>'+
+      '<div class="debt-grid">'+
+        '<div class="debt-stat"><div class="debt-stat-val val-negative">'+Fmt.brl(d.current_balance)+'</div><div class="debt-stat-lbl">Saldo devedor</div></div>'+
+        '<div class="debt-stat"><div class="debt-stat-val">'+Fmt.brl(d.monthly_payment)+'</div><div class="debt-stat-lbl">Parcela/mês</div></div>'+
+        '<div class="debt-stat"><div class="debt-stat-val">'+months+'x</div><div class="debt-stat-lbl">Parcelas restantes</div></div>'+
+      '</div>'+
+      '<div class="debt-bar"><div class="debt-bar-fill" style="width:'+pctPago+'%;background:var(--green)"></div></div>'+
+      '<div class="debt-timeline" style="display:flex;justify-content:space-between">'+
+        '<span>'+pctPago.toFixed(0)+'% pago</span>'+
+        '<span>Quitação: '+dataQuit.toLocaleDateString('pt-BR',{month:'short',year:'numeric'})+'</span>'+
+        '<span style="color:var(--red)">Juros: '+Fmt.brl(juros)+'</span>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+function renderSimDebt() {
+  const sel = document.getElementById('simDebt');
+  if (sel) sel.innerHTML = debts.map(d => '<option value="'+d.id+'">'+d.name+' — '+Fmt.brl(d.current_balance)+'</option>').join('') || '<option>Nenhuma dívida</option>';
+}
+
+function renderDebtStrategy() {
+  const el = document.getElementById('debtStrategy');
+  if (!debts.length) { el.innerHTML='<div style="color:var(--muted);font-size:13px">Nenhuma dívida cadastrada.</div>'; return; }
+  // Snowball (menor saldo primeiro) vs Avalanche (maior juros primeiro)
+  const sorted_avalanche = [...debts].sort((a,b) => b.interest_rate - a.interest_rate);
+  const sorted_snowball  = [...debts].sort((a,b) => a.current_balance - b.current_balance);
+  el.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">'+
+    '<div>'+
+      '<div style="font-size:12px;font-weight:700;margin-bottom:.75rem;color:var(--primary)">❄️ Método Bola de Neve</div>'+
+      '<div style="font-size:11px;color:var(--muted);margin-bottom:.5rem">Pague o menor saldo primeiro. Ganha motivação rápida.</div>'+
+      sorted_snowball.map((d,i) => '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px"><span style="background:var(--primary);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0">'+(i+1)+'</span>'+d.name+' <span style="margin-left:auto;color:var(--muted)">'+Fmt.brl(d.current_balance)+'</span></div>').join('')+
+    '</div>'+
+    '<div>'+
+      '<div style="font-size:12px;font-weight:700;margin-bottom:.75rem;color:var(--red)">🔥 Método Avalanche</div>'+
+      '<div style="font-size:11px;color:var(--muted);margin-bottom:.5rem">Pague o maior juros primeiro. Economiza mais dinheiro.</div>'+
+      sorted_avalanche.map((d,i) => '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px"><span style="background:var(--red);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0">'+(i+1)+'</span>'+d.name+' <span style="margin-left:auto;color:var(--muted)">'+(d.interest_rate||0)+'%/mês</span></div>').join('')+
+    '</div>'+
+  '</div>';
+}
+
+function runSimulation() {
+  const debtId = parseInt(document.getElementById('simDebt').value);
+  const extra  = parseFloat(document.getElementById('simExtra').value) || 0;
+  const debt   = debts.find(d => d.id === debtId);
+  if (!debt) return;
+  const rate = debt.interest_rate || 0;
+  function calcMonths(payment) {
+    if (rate === 0) return Math.ceil(debt.current_balance / payment);
+    return Math.ceil(Math.log(payment / (payment - debt.current_balance * rate/100)) / Math.log(1 + rate/100));
+  }
+  const m1 = calcMonths(debt.monthly_payment);
+  const m2 = calcMonths(debt.monthly_payment + extra);
+  const saved = m1 - m2;
+  const totalSaved = saved * debt.monthly_payment;
+  const q1 = new Date(); q1.setMonth(q1.getMonth() + m1);
+  const q2 = new Date(); q2.setMonth(q2.getMonth() + m2);
+  document.getElementById('simResult').style.display = 'grid';
+  document.getElementById('simResult').innerHTML =
+    '<div class="simul-stat"><div class="simul-stat-val">'+m1+' meses</div><div class="simul-stat-lbl">Prazo atual</div></div>'+
+    '<div class="simul-stat"><div class="simul-stat-val" style="color:var(--green)">'+m2+' meses</div><div class="simul-stat-lbl">Com extra de '+Fmt.brl(extra)+'/mês</div></div>'+
+    '<div class="simul-stat"><div class="simul-stat-val" style="color:var(--green)">'+saved+' meses</div><div class="simul-stat-lbl">Economizados</div></div>'+
+    '<div class="simul-stat"><div class="simul-stat-val" style="color:var(--green)">'+Fmt.brl(totalSaved)+'</div><div class="simul-stat-lbl">Em juros poupados</div></div>'+
+    '<div class="simul-stat" style="grid-column:span 2"><div class="simul-stat-val" style="color:var(--amber)">'+q2.toLocaleDateString('pt-BR',{month:'long',year:'numeric'})+'</div><div class="simul-stat-lbl">Nova data de quitação (era '+q1.toLocaleDateString('pt-BR',{month:'long',year:'numeric'})+')</div></div>';
+}
+
+// ── METAS / CAIXINHAS ──────────────────────────────────────
+async function loadGoals() {
+  try {
+    goals = await API.get('/planning/goals');
+    renderGoals();
+  } catch {}
+}
+
+function renderGoals() {
+  const el = document.getElementById('goalList');
+  if (!goals.length) {
+    el.innerHTML = '<div class="empty-state" style="padding:2rem"><div class="empty-state-icon">🪣</div><p>Nenhuma meta cadastrada.</p><button class="btn btn-primary" style="margin-top:1rem" onclick="openNewGoal()">+ Criar meta</button></div>';
+    return;
+  }
+  el.innerHTML = goals.map(g => {
+    const pct = g.target_amount > 0 ? Math.min(100, g.current_amount/g.target_amount*100) : 0;
+    const remaining = g.target_amount - g.current_amount;
+    const monthsLeft = g.monthly_target > 0 ? Math.ceil(remaining / g.monthly_target) : '∞';
+    const color = g.color || 'var(--primary)';
+    return '<div class="goal-card" style="border-left-color:'+color+'">'+
+      '<div class="goal-header">'+
+        '<div class="goal-icon">'+g.icon+'</div>'+
+        '<div class="goal-info">'+
+          '<div class="goal-name">'+g.name+'</div>'+
+          '<div class="goal-meta">'+
+            '<span class="badge '+(g.owner_type==='pf'?'badge-transfer':'badge-fixed')+'" style="font-size:9px">'+(g.owner_type==='pf'?'PF':'PJ')+'</span>'+
+            (g.target_date?' · Alvo: '+Fmt.month(g.target_date.slice(0,7)):'')+'</div>'+
+        '</div>'+
+        '<div style="display:flex;gap:6px">'+
+          '<button class="btn-icon" onclick="openEditGoal('+g.id+')">✏️</button>'+
+          '<button class="btn-icon" onclick="addToGoal('+g.id+','+g.current_amount+')" title="Adicionar depósito">💰</button>'+
+          '<button class="btn-icon" style="color:var(--red)" onclick="deleteGoal('+g.id+')">🗑️</button>'+
+        '</div>'+
+      '</div>'+
+      '<div class="goal-progress">'+
+        '<div class="goal-row"><span>'+Fmt.brl(g.current_amount)+' guardado</span><span style="font-weight:600">'+Fmt.brl(g.target_amount)+' meta</span></div>'+
+        '<div class="goal-bar"><div class="goal-bar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>'+
+        '<div class="goal-row"><span style="color:var(--muted)">Faltam '+Fmt.brl(remaining)+'</span><span style="color:var(--muted)">'+monthsLeft+' meses pelo ritmo atual</span></div>'+
+      '</div>'+
+      '<div class="goal-monthly">Guardar <strong>'+Fmt.brl(g.monthly_target)+'</strong> por mês · '+(pct).toFixed(0)+'% concluído</div>'+
+    '</div>';
+  }).join('');
+
+  // Resumo mensal
+  const totalMon = goals.reduce((s,g) => s+g.monthly_target, 0);
+  const totalPF  = goals.filter(g=>g.owner_type==='pf').reduce((s,g) => s+g.monthly_target, 0);
+  const totalPJ  = goals.filter(g=>g.owner_type==='pj').reduce((s,g) => s+g.monthly_target, 0);
+  document.getElementById('goalSummary').innerHTML =
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">'+
+    '<div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--primary)">'+Fmt.brl(totalMon)+'</div><div style="font-size:11px;color:var(--muted)">Total mensal nas caixinhas</div></div>'+
+    '<div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--blue)">'+Fmt.brl(totalPF)+'</div><div style="font-size:11px;color:var(--muted)">Pessoa Física / mês</div></div>'+
+    '<div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--green)">'+Fmt.brl(totalPJ)+'</div><div style="font-size:11px;color:var(--muted)">Empresa / mês</div></div>'+
+    '</div>'+
+    '<div style="margin-top:1rem;padding:10px;background:var(--bg);border-radius:8px;font-size:12px;color:var(--muted)">'+
+    '💡 <strong>Como usar:</strong> Todo mês, transfira '+Fmt.brl(totalMon)+' para as contas de investimento correspondentes. Depois atualize o valor guardado clicando em 💰 em cada meta.'+
+    '</div>';
+}
+
+async function addToGoal(id, current) {
+  const val = parseFloat(prompt('Quanto depositar agora? (R$)\nSaldo atual: '+Fmt.brl(current)));
+  if (!val || val <= 0) return;
+  const g = goals.find(x=>x.id===id);
+  if (!g) return;
+  try {
+    await API.put('/planning/goals/'+id, {...g, current_amount: current+val});
+    showToast('Depósito registrado!','success');
+    loadGoals();
+  } catch(e) { showToast(e.message,'error'); }
+}
+
+// ── FLUXO ─────────────────────────────────────────────────
+async function loadCashflow() {
+  try {
+    cashflow = await API.get('/planning/cashflow');
+    renderCashflow();
+  } catch {}
+}
+
+function renderCashflow() {
+  const tbody = document.getElementById('cashflowBody');
+  const maxVal = Math.max(...cashflow.map(m => Math.max(m.income, m.expense)), 1);
+  tbody.innerHTML = cashflow.map(m => {
+    const isCurrent = m.month === thisMonth;
+    const res = m.result;
+    const incW = m.income/maxVal*100;
+    const expW = m.expense/maxVal*100;
+    return '<tr'+(isCurrent?' class="current-month"':'')+'>'+
+      '<td style="white-space:nowrap;font-weight:'+(isCurrent?'700':'normal')+'">'+Fmt.month(m.month)+(isCurrent?' ◀':'')+
+        (m.month > thisMonth ? '<span style="font-size:10px;color:var(--amber);margin-left:4px">projeção</span>' : '')+
+      '</td>'+
+      '<td class="num val-positive">'+(m.income?'+'+Fmt.brl(m.income):'—')+'</td>'+
+      '<td class="num val-negative">'+(m.expense?'-'+Fmt.brl(m.expense):'—')+'</td>'+
+      '<td class="num" style="color:var(--amber)">'+(m.pending?Fmt.brl(m.pending):'—')+'</td>'+
+      '<td class="num '+(res>=0?'val-positive':'val-negative')+'">'+(m.income||m.expense?(res>=0?'+':'')+Fmt.brl(res):'—')+'</td>'+
+      '<td style="min-width:100px">'+
+        (m.income||m.expense?
+          '<div class="cashflow-mini"><div class="cashflow-mini-fill" style="width:'+incW+'%;background:#3B6D11"></div></div>'+
+          '<div class="cashflow-mini"><div class="cashflow-mini-fill" style="width:'+expW+'%;background:#A32D2D"></div></div>'
+        : '')+
+      '</td>'+
+    '</tr>';
+  }).join('');
+}
+
+// ── IA / CHAT ──────────────────────────────────────────────
+async function checkGroqKey() {
+  if (Auth.user().role !== 'admin') { document.getElementById('groqKeyPanel').style.display='none'; return; }
+  try {
+    const s = await API.get('/admin/settings');
+    if (s.groq_api_key) {
+      document.getElementById('groqKeyPanel').className = 'key-form ok';
+      document.getElementById('groqKeyPanel').innerHTML = '<span style="font-size:13px;color:var(--green);font-weight:600">✅ Chave Groq configurada</span><button class="btn btn-secondary btn-sm" onclick="resetGroqKey()">Alterar chave</button>';
+    }
+  } catch {}
+}
+
+async function saveGroqKey() {
+  const key = document.getElementById('groqKeyInput').value.trim();
+  if (!key.startsWith('gsk_')) { showToast('Chave inválida. Deve começar com gsk_','error'); return; }
+  try {
+    await API.post('/admin/settings', {key:'groq_api_key', value:key});
+    showToast('Chave salva!','success');
+    checkGroqKey();
+  } catch(e) { showToast(e.message,'error'); }
+}
+
+function resetGroqKey() {
+  document.getElementById('groqKeyPanel').className = 'key-form';
+  document.getElementById('groqKeyPanel').innerHTML = '<div class="field" style="margin:0;flex:1"><label class="lbl">🔑 Chave da API Groq</label><input type="password" id="groqKeyInput" placeholder="gsk_xxxxxxxxxxxx" style="padding:8px 10px"><div class="field-hint">Crie em <a href="https://console.groq.com/keys" target="_blank" style="color:var(--primary)">console.groq.com</a></div></div><button class="btn btn-primary" onclick="saveGroqKey()">Salvar chave</button>';
+}
+
+function sendSuggestion(btn) {
+  document.getElementById('chatInput').value = btn.textContent;
+  sendChat();
+}
+
+function handleChatKey(e) {
+  if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+}
+
+async function sendChat() {
+  const input = document.getElementById('chatInput');
+  const msg   = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  addChatMsg('user', msg);
+  chatHistory.push({role:'user', content:msg});
+  const loading = addChatMsg('ai', 'Analisando seus dados...', true);
+  document.getElementById('chatSend').disabled = true;
+  try {
+    const r = await API.post('/planning/chat', {messages: chatHistory});
+    loading.remove();
+    addChatMsg('ai', r.reply);
+    chatHistory.push({role:'assistant', content:r.reply});
+  } catch(e) {
+    loading.remove();
+    addChatMsg('ai', '❌ '+e.message);
+  }
+  document.getElementById('chatSend').disabled = false;
+}
+
+function addChatMsg(role, text, isLoading=false) {
+  const el = document.createElement('div');
+  el.className = 'msg '+role+(isLoading?' loading':'');
+  el.textContent = text;
+  const msgs = document.getElementById('chatMsgs');
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+  return el;
+}
+
+// ── MODAIS ─────────────────────────────────────────────────
+function openNewDebt() {
+  document.getElementById('debtModalTitle').textContent = 'Nova dívida';
+  document.getElementById('dmId').value = '';
+  document.getElementById('dmName').value = '';
+  document.getElementById('dmBank').value = '';
+  document.getElementById('dmBalance').value = '';
+  document.getElementById('dmPayment').value = '';
+  document.getElementById('dmRate').value = '0';
+  openModal('debtModal');
+}
+function openEditDebt(id) {
+  const d = debts.find(x=>x.id===id); if (!d) return;
+  document.getElementById('debtModalTitle').textContent = 'Editar dívida';
+  document.getElementById('dmId').value = id;
+  document.getElementById('dmName').value = d.name;
+  document.getElementById('dmBank').value = d.bank||'';
+  document.getElementById('dmBalance').value = d.current_balance;
+  document.getElementById('dmPayment').value = d.monthly_payment;
+  document.getElementById('dmRate').value = d.interest_rate||0;
+  openModal('debtModal');
+}
+async function saveDebt() {
+  const editId = document.getElementById('dmId').value;
+  const body = {name:document.getElementById('dmName').value.trim(),bank:document.getElementById('dmBank').value.trim(),current_balance:parseFloat(document.getElementById('dmBalance').value)||0,monthly_payment:parseFloat(document.getElementById('dmPayment').value)||0,initial_amount:parseFloat(document.getElementById('dmBalance').value)||0,interest_rate:parseFloat(document.getElementById('dmRate').value)||0};
+  if (!body.name||!body.monthly_payment) { showToast('Preencha nome e parcela.','error'); return; }
+  try {
+    if (editId) { await API.put('/planning/debts/'+editId,body); showToast('Atualizado!','success'); }
+    else { await API.post('/planning/debts',body); showToast('Dívida cadastrada!','success'); }
+    closeModal('debtModal'); await Promise.all([loadDebts(), loadScore()]);
+  } catch(e) { showToast(e.message,'error'); }
+}
+async function deleteDebt(id) {
+  if (!await confirmAction('Excluir esta dívida?')) return;
+  try { await API.delete('/planning/debts/'+id); showToast('Excluída.','info'); await Promise.all([loadDebts(),loadScore()]); }
+  catch(e) { showToast(e.message,'error'); }
+}
+
+function openNewGoal() {
+  document.getElementById('goalModalTitle').textContent = 'Nova meta';
+  document.getElementById('gmId').value = '';
+  document.getElementById('gmName').value = '';
+  document.getElementById('gmTarget').value = '';
+  document.getElementById('gmCurrent').value = '0';
+  document.getElementById('gmMonthly').value = '';
+  document.getElementById('gmDate').value = '';
+  document.getElementById('gmOwner').value = 'pj';
+  document.getElementById('gmIcon').value = '🪣';
+  openModal('goalModal');
+}
+function openEditGoal(id) {
+  const g = goals.find(x=>x.id===id); if (!g) return;
+  document.getElementById('goalModalTitle').textContent = 'Editar meta';
+  document.getElementById('gmId').value = id;
+  document.getElementById('gmName').value = g.name;
+  document.getElementById('gmTarget').value = g.target_amount;
+  document.getElementById('gmCurrent').value = g.current_amount;
+  document.getElementById('gmMonthly').value = g.monthly_target;
+  document.getElementById('gmDate').value = g.target_date ? g.target_date.slice(0,7) : '';
+  document.getElementById('gmOwner').value = g.owner_type||'pj';
+  document.getElementById('gmIcon').value = g.icon||'🪣';
+  openModal('goalModal');
+}
+async function saveGoal() {
+  const editId = document.getElementById('gmId').value;
+  const body = {name:document.getElementById('gmName').value.trim(),target_amount:parseFloat(document.getElementById('gmTarget').value)||0,current_amount:parseFloat(document.getElementById('gmCurrent').value)||0,monthly_target:parseFloat(document.getElementById('gmMonthly').value)||0,target_date:document.getElementById('gmDate').value||null,owner_type:document.getElementById('gmOwner').value,icon:document.getElementById('gmIcon').value||'🪣',color:'#0F6E56'};
+  if (!body.name||!body.target_amount||!body.monthly_target) { showToast('Preencha nome, meta e valor mensal.','error'); return; }
+  try {
+    if (editId) { await API.put('/planning/goals/'+editId,body); showToast('Atualizado!','success'); }
+    else { await API.post('/planning/goals',body); showToast('Meta criada!','success'); }
+    closeModal('goalModal'); await Promise.all([loadGoals(), loadScore()]);
+  } catch(e) { showToast(e.message,'error'); }
+}
+async function deleteGoal(id) {
+  if (!await confirmAction('Excluir esta meta?')) return;
+  try { await API.delete('/planning/goals/'+id); showToast('Excluída.','info'); await Promise.all([loadGoals(),loadScore()]); }
+  catch(e) { showToast(e.message,'error'); }
+}
+
+// ── TABS ──────────────────────────────────────────────────
+function showTab(id) {
+  ['saude','dividas','caixinhas','fluxo','ia'].forEach(t => {
+    document.getElementById('tab-'+t).style.display = t===id ? '' : 'none';
+    document.getElementById('vt-'+t).classList.toggle('active', t===id);
+  });
+}
+
+init();
+</script>
+</body>
+</html>

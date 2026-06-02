@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestão Financeira SL</title>
+<link rel="stylesheet" href="/css/global.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-content">
+    <div class="page-header">
+      <h1>⚙️ Administração</h1>
+    </div>
+    <div class="page-body">
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('users')">👤 Usuários</button>
+        <button class="tab-btn" onclick="switchTab('permissions')">🔐 Permissões</button>
+        <button class="tab-btn" onclick="switchTab('password')">🔑 Minha senha</button>
+      </div>
+
+      <!-- USUÁRIOS -->
+      <div id="tab-users">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Usuários do sistema</span>
+            <button class="btn btn-primary btn-sm" onclick="openAdd()">+ Novo usuário</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Usuário</th><th>E-mail</th><th>Perfil</th><th>Status</th><th>Ações</th></tr></thead>
+              <tbody id="userTable"><tr><td colspan="5" style="text-align:center;padding:1.5rem;color:var(--muted)">Carregando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PERMISSÕES -->
+      <div id="tab-permissions" style="display:none">
+        <div class="card" style="margin-bottom:1rem">
+          <div class="card-header">
+            <span class="card-title">Permissões por usuário</span>
+            <select id="permUserSel" onchange="loadPermissions()" style="padding:6px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px">
+              <option value="">Selecione o usuário</option>
+            </select>
+          </div>
+          <div class="card-body" id="permBody">
+            <div style="color:var(--muted);font-size:13px">Selecione um usuário para ver e editar suas permissões.</div>
+          </div>
+        </div>
+
+        <!-- TABELA REFERÊNCIA -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">📋 Referência — o que cada permissão libera</span></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Módulo</th><th>Permissão</th><th>O que libera</th></tr></thead>
+              <tbody>
+                <tr><td rowspan="4">✅ Checklist</td><td><code>view</code></td><td>Ver o checklist</td></tr>
+                <tr><td><code>mark</code></td><td>Marcar e desmarcar tarefas</td></tr>
+                <tr><td><code>owner</code></td><td>Alterar responsável de cada tarefa</td></tr>
+                <tr><td><code>reset</code></td><td>Limpar progresso de um período</td></tr>
+                <tr><td rowspan="5">💰 Finanças</td><td><code>view</code></td><td>Ver contas, lançamentos e relatórios</td></tr>
+                <tr><td><code>launch</code></td><td>Criar novos lançamentos e contas</td></tr>
+                <tr><td><code>edit</code></td><td>Editar lançamentos e contas</td></tr>
+                <tr><td><code>delete</code></td><td>Excluir lançamentos</td></tr>
+                <tr><td><code>family</code></td><td>Ver visão consolidada familiar</td></tr>
+                <tr><td rowspan="2">📈 Investimentos</td><td><code>view</code></td><td>Ver metas, carteira e cotações</td></tr>
+                <tr><td><code>edit</code></td><td>Criar e editar metas e carteira</td></tr>
+                <tr><td rowspan="2">⚙️ Admin</td><td><code>users</code></td><td>Gerenciar usuários (só admin)</td></tr>
+                <tr><td><code>permissions</code></td><td>Gerenciar permissões (só admin)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- SENHA -->
+      <div id="tab-password" style="display:none">
+        <div class="card" style="max-width:440px">
+          <div class="card-header"><span class="card-title">🔑 Alterar minha senha</span></div>
+          <div class="card-body">
+            <div class="field"><label class="lbl">Senha atual</label><input type="password" id="pwdCurrent" placeholder="Senha atual"></div>
+            <div class="field"><label class="lbl">Nova senha</label><input type="password" id="pwdNew" placeholder="Mínimo 6 caracteres"></div>
+            <div class="field"><label class="lbl">Confirmar nova senha</label><input type="password" id="pwdConfirm"></div>
+            <div id="pwdErr" class="alert alert-error" style="display:none"></div>
+            <button class="btn btn-primary" onclick="changePwd()">Atualizar senha</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODAL USUÁRIO -->
+<div class="overlay" id="userModal" onclick="closeOnOverlay(event)">
+  <div class="modal">
+    <h3 id="modalTitle">Novo usuário</h3>
+    <div class="field"><label class="lbl">Nome</label><input type="text" id="fName"></div>
+    <div class="field"><label class="lbl">E-mail</label><input type="email" id="fEmail"></div>
+    <div class="field"><label class="lbl">Senha</label><input type="password" id="fPassword" placeholder="Mínimo 6 caracteres"><div class="field-hint" id="pwdHint">Mínimo 6 caracteres</div></div>
+    <div class="field"><label class="lbl">Perfil base</label>
+      <select id="fRole">
+        <option value="operacional">Operacional</option>
+        <option value="gestor">Gestor</option>
+        <option value="admin">Administrador</option>
+      </select>
+    </div>
+    <div class="field" id="activeField" style="display:none"><label class="lbl">Status</label>
+      <select id="fActive"><option value="1">Ativo</option><option value="0">Inativo</option></select>
+    </div>
+    <div id="modalErr" class="alert alert-error" style="display:none"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('userModal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveUser()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/shared.js"></script>
+<script>
+if (!Auth.requireLogin()) throw '';
+if (Auth.user().role !== 'admin') { window.location.href='/home'; throw ''; }
+buildSidebar('admin');
+
+let editingId = null, allUsers = [];
+
+function switchTab(id) {
+  ['users','permissions','password'].forEach(t => document.getElementById('tab-'+t).style.display = t===id?'':'none');
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', ['users','permissions','password'][i]===id));
+}
+
+// ── USUÁRIOS ────────────────────────────────────────────────────
+async function loadUsers() {
+  allUsers = await API.get('/users');
+  const tbody = document.getElementById('userTable');
+  const me = Auth.user();
+
+  // Preencher select de permissões
+  const sel = document.getElementById('permUserSel');
+  sel.innerHTML = '<option value="">Selecione o usuário</option>' +
+    allUsers.map(u=>`<option value="${u.id}">${u.name} (${u.role})</option>`).join('');
+
+  if (!allUsers.length) { tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:1.5rem;color:var(--muted)">Nenhum usuário.</td></tr>'; return; }
+  tbody.innerHTML = allUsers.map(u => `
+    <tr>
+      <td><div style="display:flex;align-items:center;gap:8px">
+        <div class="avatar ${Fmt.avClass(u.name)}">${Fmt.initials(u.name)}</div>
+        <span style="font-weight:500">${u.name}${u.id===parseInt(me.id)?' <span style="font-size:10px;color:var(--muted)">(você)</span>':''}</span>
+      </div></td>
+      <td style="color:var(--muted)">${u.email}</td>
+      <td><span class="badge ${u.role==='admin'?'badge-fixed':u.role==='gestor'?'badge-income':'badge-variable'}">${{admin:'Admin',gestor:'Gestor',operacional:'Operacional'}[u.role]}</span></td>
+      <td style="color:${u.active?'var(--green)':'var(--muted);'}">${u.active?'● Ativo':'○ Inativo'}</td>
+      <td><div style="display:flex;gap:6px">
+        <button class="btn btn-sm btn-secondary" onclick="openEdit(${u.id})">Editar</button>
+        <button class="btn btn-sm btn-secondary" onclick="goPerms(${u.id})">Permissões</button>
+        ${u.id!==parseInt(me.id)?`<button class="btn btn-sm btn-danger" onclick="toggleActive(${u.id},${u.active})">${u.active?'Desativar':'Reativar'}</button>`:''}
+      </div></td>
+    </tr>
+  `).join('');
+}
+
+function openAdd() {
+  editingId=null;
+  document.getElementById('modalTitle').textContent='Novo usuário';
+  ['fName','fEmail','fPassword'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fRole').value='operacional';
+  document.getElementById('activeField').style.display='none';
+  document.getElementById('pwdHint').textContent='Mínimo 6 caracteres';
+  document.getElementById('modalErr').style.display='none';
+  openModal('userModal');
+}
+
+function openEdit(id) {
+  const u = allUsers.find(x=>x.id===id);
+  if (!u) return;
+  editingId=id;
+  document.getElementById('modalTitle').textContent='Editar usuário';
+  document.getElementById('fName').value=u.name;
+  document.getElementById('fEmail').value=u.email;
+  document.getElementById('fPassword').value='';
+  document.getElementById('fRole').value=u.role;
+  document.getElementById('fActive').value=u.active?'1':'0';
+  document.getElementById('activeField').style.display='';
+  document.getElementById('pwdHint').textContent='Deixe em branco para manter a senha atual';
+  document.getElementById('modalErr').style.display='none';
+  openModal('userModal');
+}
+
+async function saveUser() {
+  const body = {
+    name:     document.getElementById('fName').value.trim(),
+    email:    document.getElementById('fEmail').value.trim(),
+    password: document.getElementById('fPassword').value,
+    role:     document.getElementById('fRole').value,
+    active:   document.getElementById('fActive').value==='1',
+  };
+  try {
+    if (editingId) { await API.put('/users/'+editingId, body); }
+    else           { await API.post('/users', body); }
+    closeModal('userModal'); showToast(editingId?'Usuário atualizado!':'Usuário criado!','success');
+    loadUsers();
+  } catch(e) {
+    const el=document.getElementById('modalErr'); el.textContent=e.message; el.style.display='flex';
+  }
+}
+
+async function toggleActive(id, current) {
+  const u = allUsers.find(x=>x.id===id);
+  if (!u) return;
+  if (!await confirmAction(`${current?'Desativar':'Reativar'} o usuário ${u.name}?`)) return;
+  await API.put('/users/'+id, { name:u.name, email:u.email, role:u.role, active:!current });
+  showToast('Usuário atualizado.','success'); loadUsers();
+}
+
+// ── PERMISSÕES ──────────────────────────────────────────────────
+function goPerms(id) {
+  switchTab('permissions');
+  document.getElementById('permUserSel').value = id;
+  loadPermissions();
+}
+
+const MODULES = {
+  checklist: { label:'✅ Checklist', actions: { view:'Ver checklist', mark:'Marcar tarefas', owner:'Alterar responsável', reset:'Limpar período' } },
+  finance:   { label:'💰 Finanças',  actions: { view:'Ver tudo', launch:'Criar lançamentos', edit:'Editar', delete:'Excluir', family:'Visão familiar', reports:'Relatórios' } },
+  invest:    { label:'📈 Investimentos', actions: { view:'Ver tudo', edit:'Criar e editar' } },
+  dashboard: { label:'📊 Dashboard', actions: { view:'Acessar dashboard' } },
+};
+
+async function loadPermissions() {
+  const uid = document.getElementById('permUserSel').value;
+  const el  = document.getElementById('permBody');
+  if (!uid) { el.innerHTML='<div style="color:var(--muted);font-size:13px">Selecione um usuário.</div>'; return; }
+
+  const u = allUsers.find(x=>x.id===parseInt(uid));
+  if (u?.role==='admin') { el.innerHTML='<div class="alert alert-info">Administradores têm acesso total a tudo — não é possível restringir permissões.</div>'; return; }
+
+  const perms = await API.get('/permissions/'+uid);
+  el.innerHTML = Object.entries(MODULES).map(([mod, {label, actions}]) => `
+    <div style="margin-bottom:1.25rem">
+      <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:.5rem">${label}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">
+        ${Object.entries(actions).map(([action, desc]) => {
+          const checked = perms[mod]?.[action] ? 'checked' : '';
+          return `<label class="toggle-wrap" style="padding:8px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
+            <label class="toggle"><input type="checkbox" data-mod="${mod}" data-action="${action}" ${checked} onchange="savePermission(${uid},this)"><span class="toggle-slider"></span></label>
+            <span class="toggle-label" style="font-size:12px">${desc}</span>
+          </label>`;
+        }).join('')}
+      </div>
+    </div>
+  `).join('') + `<button class="btn btn-primary btn-sm" onclick="saveAllPermissions(${uid})">💾 Salvar todas as permissões</button>`;
+}
+
+async function savePermission(uid, checkbox) {
+  const mod    = checkbox.dataset.mod;
+  const action = checkbox.dataset.action;
+  const enabled = checkbox.checked;
+  try {
+    await API.post('/permissions/'+uid, { permissions: { [mod]: { [action]: enabled } } });
+    showToast('Permissão atualizada.','success');
+  } catch(e) { showToast(e.message,'error'); checkbox.checked = !enabled; }
+}
+
+async function saveAllPermissions(uid) {
+  const checkboxes = document.querySelectorAll('#permBody input[type=checkbox]');
+  const permissions = {};
+  checkboxes.forEach(cb => {
+    const mod=cb.dataset.mod, action=cb.dataset.action;
+    if(!permissions[mod]) permissions[mod]={};
+    permissions[mod][action]=cb.checked;
+  });
+  try {
+    await API.post('/permissions/'+uid, { permissions });
+    showToast('Permissões salvas!','success');
+  } catch(e) { showToast(e.message,'error'); }
+}
+
+// ── SENHA ────────────────────────────────────────────────────────
+async function changePwd() {
+  const cur=document.getElementById('pwdCurrent').value, nw=document.getElementById('pwdNew').value, cf=document.getElementById('pwdConfirm').value;
+  const err=document.getElementById('pwdErr'); err.style.display='none';
+  if (!cur||!nw) { err.textContent='Preencha todos os campos.'; err.style.display='flex'; return; }
+  if (nw!==cf)   { err.textContent='As senhas não coincidem.'; err.style.display='flex'; return; }
+  try {
+    await API.post('/auth/change-password', { currentPassword:cur, newPassword:nw });
+    ['pwdCurrent','pwdNew','pwdConfirm'].forEach(id=>document.getElementById(id).value='');
+    showToast('Senha atualizada!','success');
+  } catch(e) { err.textContent=e.message; err.style.display='flex'; }
+}
+
+loadUsers();
+</script>
+</body>
+</html>

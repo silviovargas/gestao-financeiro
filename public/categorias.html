@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestão Financeira SL</title>
+<link rel="stylesheet" href="/css/global.css">
+<style>
+.cat-list { }
+
+.cat-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  transition: background .1s;
+}
+.cat-row:last-child { border-bottom: none; }
+.cat-row:hover { background: var(--bg); }
+
+.cat-icon-wrap {
+  width: 36px; height: 36px;
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+
+.cat-info { flex: 1; min-width: 0; }
+.cat-name { font-size: 13px; font-weight: 500; }
+.cat-meta { font-size: 11px; color: var(--muted); margin-top: 2px; display: flex; align-items: center; gap: 8px; }
+
+.cat-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+.system-tag {
+  font-size: 10px; font-weight: 500;
+  padding: 1px 7px; border-radius: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.type-section-header {
+  padding: 8px 14px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.usage-count {
+  font-size: 10px;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+/* EMOJI PICKER */
+.emoji-grid {
+  display: flex; flex-wrap: wrap; gap: 4px;
+  padding: 8px;
+  max-height: 160px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  margin-top: 6px;
+}
+.emoji-btn {
+  width: 32px; height: 32px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .1s;
+}
+.emoji-btn:hover { background: var(--surface); border-color: var(--border); }
+.emoji-btn.selected { background: var(--teal-l); border-color: var(--teal-b); }
+
+/* COLOR PICKER */
+.color-grid {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px;
+}
+.color-dot {
+  width: 26px; height: 26px; border-radius: 50%;
+  cursor: pointer; border: 2px solid transparent;
+  transition: all .15s; flex-shrink: 0;
+}
+.color-dot.selected { border-color: var(--text); transform: scale(1.15); }
+
+/* BACKUP */
+.backup-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.backup-info { display: flex; gap: 10px; flex-wrap: wrap; padding: 1rem; }
+.backup-stat {
+  flex: 1; min-width: 100px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.backup-stat-label { font-size: 11px; color: var(--muted); }
+.backup-stat-val   { font-size: 18px; font-weight: 600; color: var(--teal); margin-top: 3px; }
+.backup-stat-sub   { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+.btn-backup {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--teal); color: #fff;
+  border: none; border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 13px; font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .15s;
+}
+.btn-backup:hover { background: var(--teal-d); }
+.btn-backup:active { transform: scale(.98); }
+
+.backup-note {
+  font-size: 11px; color: var(--muted);
+  padding: 10px 1rem;
+  border-top: 1px solid var(--border);
+  line-height: 1.55;
+}
+</style>
+</head>
+<body>
+
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <div class="main-content">
+
+    <div class="page-header">
+      <h1>🏷️ Categorias Financeiras</h1>
+      <div class="page-header-actions">
+        <button class="btn btn-primary" onclick="openAdd()">+ Nova categoria</button>
+      </div>
+    </div>
+
+    <div class="page-body">
+
+      <!-- TABS -->
+      <div class="tab-bar">
+        <button class="tab-btn active" id="tab-cats" onclick="switchTab('cats')">🏷️ Categorias</button>
+        <button class="tab-btn" id="tab-backup" onclick="switchTab('backup')">💾 Backup do banco</button>
+      </div>
+
+      <!-- ABA CATEGORIAS -->
+      <div id="panel-cats">
+
+        <div class="filter-bar">
+          <select id="filterType" onchange="renderList()">
+            <option value="">Todas</option>
+            <option value="expense">Despesas</option>
+            <option value="income">Receitas</option>
+          </select>
+          <input type="text" id="filterSearch" placeholder="Buscar categoria..." oninput="renderList()" style="flex:1;min-width:140px">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer">
+            <input type="checkbox" id="showSystem" onchange="renderList()" checked>
+            Mostrar categorias do sistema
+          </label>
+        </div>
+
+        <div class="card">
+          <div id="catList"><div style="padding:2rem;text-align:center;color:var(--muted)">Carregando...</div></div>
+        </div>
+
+      </div>
+
+      <!-- ABA BACKUP -->
+      <div id="panel-backup" style="display:none">
+
+        <div class="backup-card" style="margin-bottom:1rem">
+          <div style="padding:1rem;border-bottom:1px solid var(--border)">
+            <div style="font-size:13px;font-weight:600;margin-bottom:4px">📊 Informações do banco de dados</div>
+            <div style="font-size:11px;color:var(--muted)">Dados atualizados em tempo real</div>
+          </div>
+          <div class="backup-info" id="backupInfo">
+            <div style="padding:1rem;color:var(--muted);font-size:13px">Carregando informações...</div>
+          </div>
+          <div class="backup-note" id="backupDate"></div>
+        </div>
+
+        <div class="backup-card" style="margin-bottom:1rem">
+          <div style="padding:1rem">
+            <div style="font-size:13px;font-weight:600;margin-bottom:4px">💾 Fazer backup agora</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:1rem;line-height:1.55">
+              Baixa uma cópia completa do banco de dados <code>database.db</code> com todos os dados do sistema —
+              usuários, lançamentos financeiros, checklist, metas e permissões. Guarde em local seguro.
+            </div>
+            <button class="btn-backup" onclick="downloadBackup()">
+              <span>⬇️</span> Baixar backup agora
+            </button>
+          </div>
+          <div class="backup-note">
+            <strong>Como restaurar:</strong> Para restaurar um backup, copie o arquivo <code>.db</code> baixado
+            para <code>/var/www/checklist-app/database.db</code> e reinicie o serviço com
+            <code>sudo systemctl restart ballet-checklist</code>.
+            <br><br>
+            <strong>Recomendação:</strong> Faça backup ao menos uma vez por semana e sempre antes de atualizações do sistema.
+          </div>
+        </div>
+
+        <div class="backup-card">
+          <div style="padding:1rem">
+            <div style="font-size:13px;font-weight:600;margin-bottom:4px">📋 Backup automático via terminal</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:.75rem">Você também pode fazer backup pelo terminal da VPS a qualquer momento:</div>
+            <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:monospace;font-size:11px;color:var(--text);line-height:1.7">
+              cp /var/www/checklist-app/database.db ~/ballet-backup-$(date +%Y%m%d).db
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CATEGORIA -->
+<div class="overlay" id="catModal" onclick="closeOnOverlay(event)">
+  <div class="modal">
+    <h3 id="catModalTitle">Nova categoria</h3>
+    <input type="hidden" id="catEditId">
+
+    <div class="field">
+      <label class="lbl">Tipo</label>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-sm" id="btnExpense" onclick="setCatType('expense')" style="flex:1">
+          − Despesa
+        </button>
+        <button class="btn btn-sm" id="btnIncome" onclick="setCatType('income')" style="flex:1">
+          + Receita
+        </button>
+      </div>
+      <input type="hidden" id="catType" value="expense">
+    </div>
+
+    <div class="field">
+      <label class="lbl">Nome</label>
+      <input type="text" id="catName" placeholder="Ex: Uniformes, Festival, Salário...">
+    </div>
+
+    <div class="field">
+      <label class="lbl">Ícone <span style="font-size:11px;color:var(--muted);font-weight:400">(clique para escolher)</span></label>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div id="iconPreview" style="width:40px;height:40px;border-radius:10px;background:var(--bg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer" onclick="toggleEmojiPicker()">📁</div>
+        <input type="hidden" id="catIcon" value="📁">
+        <span style="font-size:11px;color:var(--muted)">Clique no ícone para trocar</span>
+      </div>
+      <div id="emojiPicker" style="display:none">
+        <div class="emoji-grid" id="emojiGrid"></div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="lbl">Cor</label>
+      <div class="color-grid" id="colorGrid"></div>
+      <input type="hidden" id="catColor" value="#0F6E56">
+    </div>
+
+    <div id="catErr" class="alert alert-error" style="display:none;margin-top:.75rem"></div>
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('catModal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCat()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/shared.js"></script>
+<script>
+if (!Auth.requireLogin()) throw '';
+if (!['admin','gestor'].includes(Auth.user().role)) { window.location.href='/home'; throw ''; }
+buildSidebar('categorias');
+
+// ── DADOS ────────────────────────────────────────────────────────
+let allCats = [];
+
+async function loadCats() {
+  try {
+    allCats = await API.get('/finance/categories/all');
+    renderList();
+  } catch {
+    allCats = [];
+    renderList();
+  }
+}
+
+// ── RENDER ────────────────────────────────────────────────────────
+function renderList() {
+  const type    = document.getElementById('filterType').value;
+  const search  = document.getElementById('filterSearch').value.toLowerCase();
+  const showSys = document.getElementById('showSystem').checked;
+
+  let cats = allCats.filter(c => {
+    if (type   && c.type !== type)                   return false;
+    if (!showSys && c.system)                         return false;
+    if (search && !c.name.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  const el = document.getElementById('catList');
+  if (!cats.length) {
+    el.innerHTML = '<div class="empty-state" style="padding:2rem"><div class="empty-state-icon">🏷️</div><p>Nenhuma categoria encontrada.</p></div>';
+    return;
+  }
+
+  // Agrupar por tipo
+  const groups = { expense: cats.filter(c=>c.type==='expense'), income: cats.filter(c=>c.type==='income') };
+
+  let html = '';
+  if (groups.expense.length) {
+    html += `<div class="type-section-header">
+      <span class="badge badge-expense">Despesas</span>
+      <span>${groups.expense.length} categorias</span>
+    </div>`;
+    html += groups.expense.map(c => catRow(c)).join('');
+  }
+  if (groups.income.length) {
+    html += `<div class="type-section-header" style="border-top:1px solid var(--border)">
+      <span class="badge badge-income">Receitas</span>
+      <span>${groups.income.length} categorias</span>
+    </div>`;
+    html += groups.income.map(c => catRow(c)).join('');
+  }
+
+  el.innerHTML = '<div class="cat-list">' + html + '</div>';
+}
+
+function catRow(c) {
+  const isAdmin = Auth.user().role === 'admin';
+  const canEdit = isAdmin || !c.system;
+
+  return `
+    <div class="cat-row">
+      <div class="cat-icon-wrap" style="background:${c.color}22;border:1px solid ${c.color}44">
+        <span>${c.icon || '📁'}</span>
+      </div>
+      <div class="cat-info">
+        <div class="cat-name">${c.name}</div>
+        <div class="cat-meta">
+          ${c.system
+            ? '<span class="system-tag">Sistema</span>'
+            : '<span class="system-tag" style="border-color:var(--teal-b);color:var(--teal);background:var(--teal-l)">Personalizada</span>'
+          }
+          <span class="usage-count">${c.usage_count} lançamento${c.usage_count !== 1 ? 's' : ''}</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <div style="width:12px;height:12px;border-radius:50%;background:${c.color};flex-shrink:0"></div>
+        <span style="font-size:11px;color:var(--muted)">${c.color}</span>
+      </div>
+      <div class="cat-actions">
+        ${canEdit ? `<button class="btn btn-sm btn-secondary" onclick="openEdit(${c.id})">✏️ Editar</button>` : ''}
+        ${!c.system ? `<button class="btn btn-sm btn-danger" onclick="deleteCat(${c.id}, '${c.name}', ${c.usage_count})">🗑️</button>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+// ── TABS ──────────────────────────────────────────────────────────
+function switchTab(id) {
+  ['cats','backup'].forEach(t => {
+    document.getElementById('panel-'+t).style.display = t===id ? '' : 'none';
+    document.getElementById('tab-'+t).classList.toggle('active', t===id);
+  });
+  if (id === 'backup') loadBackupInfo();
+}
+
+// ── MODAL ─────────────────────────────────────────────────────────
+const EMOJIS = [
+  '🏠','🛒','🚗','❤️','📚','🎭','👕','💡','📋','📦',
+  '💼','💻','📈','💰','🩰','🎵','🎪','🏆','⚡','💧',
+  '🔧','📱','✈️','🍕','☕','🎓','🏥','🛡️','🎯','💎',
+  '🌟','🔑','📂','🗂️','💳','🏦','📊','🎁','🚀','🌱',
+  '🛍️','🎨','🏋️','🤝','👶','🐾','🌙','⚙️','🔄','📌',
+];
+
+const COLORS = [
+  '#0F6E56','#085041','#185FA5','#534AB7','#854F0B',
+  '#3B6D11','#993C1D','#A32D2D','#5a5a56','#1D9E75',
+  '#C05C00','#2D6A8F','#6B3FA0','#1A6B3C','#8B4513',
+];
+
+function buildEmojiGrid() {
+  document.getElementById('emojiGrid').innerHTML = EMOJIS.map(e =>
+    `<button class="emoji-btn" onclick="selectEmoji('${e}')">${e}</button>`
+  ).join('');
+}
+
+function buildColorGrid() {
+  document.getElementById('colorGrid').innerHTML = COLORS.map(c =>
+    `<div class="color-dot" style="background:${c}" title="${c}" onclick="selectColor('${c}')"></div>`
+  ).join('');
+}
+
+function toggleEmojiPicker() {
+  const el = document.getElementById('emojiPicker');
+  el.style.display = el.style.display === 'none' ? '' : 'none';
+}
+
+function selectEmoji(e) {
+  document.getElementById('catIcon').value = e;
+  document.getElementById('iconPreview').textContent = e;
+  document.getElementById('emojiGrid').querySelectorAll('.emoji-btn').forEach(b => b.classList.toggle('selected', b.textContent === e));
+}
+
+function selectColor(c) {
+  document.getElementById('catColor').value = c;
+  const preview = document.getElementById('iconPreview');
+  preview.style.background = c + '22';
+  preview.style.borderColor = c + '66';
+  document.getElementById('colorGrid').querySelectorAll('.color-dot').forEach(d => d.classList.toggle('selected', d.style.background === c || d.title === c));
+}
+
+function setCatType(type) {
+  document.getElementById('catType').value = type;
+  const be = document.getElementById('btnExpense');
+  const bi = document.getElementById('btnIncome');
+  if (type === 'expense') {
+    be.style.cssText = 'flex:1;background:var(--red-l);color:var(--red);border:1px solid var(--red-b)';
+    bi.style.cssText = 'flex:1';
+  } else {
+    bi.style.cssText = 'flex:1;background:var(--green-l);color:var(--green);border:1px solid var(--green-b)';
+    be.style.cssText = 'flex:1';
+  }
+}
+
+function openAdd() {
+  document.getElementById('catEditId').value = '';
+  document.getElementById('catModalTitle').textContent = 'Nova categoria';
+  document.getElementById('catName').value = '';
+  document.getElementById('catErr').style.display = 'none';
+  document.getElementById('emojiPicker').style.display = 'none';
+  selectEmoji('📁');
+  selectColor('#0F6E56');
+  setCatType('expense');
+  openModal('catModal');
+}
+
+function openEdit(id) {
+  const c = allCats.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('catEditId').value = id;
+  document.getElementById('catModalTitle').textContent = 'Editar categoria';
+  document.getElementById('catName').value = c.name;
+  document.getElementById('catErr').style.display = 'none';
+  document.getElementById('emojiPicker').style.display = 'none';
+  selectEmoji(c.icon || '📁');
+  selectColor(c.color || '#5a5a56');
+  setCatType(c.type);
+  openModal('catModal');
+}
+
+async function saveCat() {
+  const editId = document.getElementById('catEditId').value;
+  const body = {
+    name:  document.getElementById('catName').value.trim(),
+    type:  document.getElementById('catType').value,
+    icon:  document.getElementById('catIcon').value,
+    color: document.getElementById('catColor').value,
+  };
+  const errEl = document.getElementById('catErr');
+  errEl.style.display = 'none';
+
+  if (!body.name) { errEl.textContent = 'Informe o nome da categoria.'; errEl.style.display = 'flex'; return; }
+
+  try {
+    if (editId) {
+      await API.put('/finance/categories/' + editId, body);
+      showToast('Categoria atualizada!', 'success');
+    } else {
+      await API.post('/finance/categories', body);
+      showToast('Categoria criada!', 'success');
+    }
+    closeModal('catModal');
+    await loadCats();
+  } catch(e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'flex';
+  }
+}
+
+async function deleteCat(id, name, usage) {
+  if (usage > 0) {
+    showToast(`Não é possível excluir "${name}" — está em ${usage} lançamento(s).`, 'error');
+    return;
+  }
+  if (!await confirmAction(`Excluir a categoria "${name}"? Esta ação não pode ser desfeita.`)) return;
+  try {
+    await API.delete('/finance/categories/' + id);
+    showToast('Categoria excluída.', 'success');
+    await loadCats();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+// ── BACKUP ────────────────────────────────────────────────────────
+async function loadBackupInfo() {
+  try {
+    const info = await API.get('/admin/backup/info');
+    document.getElementById('backupInfo').innerHTML = `
+      <div class="backup-stat">
+        <div class="backup-stat-label">Tamanho do banco</div>
+        <div class="backup-stat-val">${info.size_kb} KB</div>
+        <div class="backup-stat-sub">database.db</div>
+      </div>
+      <div class="backup-stat">
+        <div class="backup-stat-label">Usuários</div>
+        <div class="backup-stat-val">${info.records.users}</div>
+        <div class="backup-stat-sub">cadastrados</div>
+      </div>
+      <div class="backup-stat">
+        <div class="backup-stat-label">Lançamentos</div>
+        <div class="backup-stat-val">${info.records.transactions}</div>
+        <div class="backup-stat-sub">financeiros</div>
+      </div>
+      <div class="backup-stat">
+        <div class="backup-stat-label">Tarefas</div>
+        <div class="backup-stat-val">${info.records.task_progress}</div>
+        <div class="backup-stat-sub">no histórico</div>
+      </div>
+      <div class="backup-stat">
+        <div class="backup-stat-label">Metas</div>
+        <div class="backup-stat-val">${info.records.inv_goals}</div>
+        <div class="backup-stat-sub">de investimento</div>
+      </div>
+    `;
+    document.getElementById('backupDate').textContent =
+      `Última modificação do banco: ${Fmt.dateTime(info.modified)}`;
+  } catch(e) {
+    document.getElementById('backupInfo').innerHTML = `<div style="padding:1rem;color:var(--muted);font-size:13px">Não foi possível carregar as informações.</div>`;
+  }
+}
+
+async function downloadBackup() {
+  try {
+    const token = Auth.token();
+    // Criar link temporário com token no header não é possível via anchor
+    // Usar fetch e blob para forçar download
+    showToast('Preparando backup...', 'default');
+    const r = await fetch('/api/admin/backup', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!r.ok) { showToast('Erro ao gerar backup.', 'error'); return; }
+    const blob = await r.blob();
+    const cd = r.headers.get('Content-Disposition') || '';
+    const fname = cd.match(/filename="(.+?)"/)?.[1] || 'ballet_backup.db';
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Backup baixado com sucesso!', 'success');
+  } catch(e) { showToast('Erro ao fazer backup: ' + e.message, 'error'); }
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+buildEmojiGrid();
+buildColorGrid();
+loadCats();
+</script>
+</body>
+</html>

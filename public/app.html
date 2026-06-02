@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checklist — Gestão Financeira SL</title>
+<link rel="stylesheet" href="/css/global.css">
+<style>
+/* ── LISTAS TABS ── */
+.lists-bar {
+  display: flex; gap: 6px; align-items: center;
+  flex-wrap: wrap; margin-bottom: 1.25rem;
+}
+.list-tab {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  font-size: 13px; font-weight: 500; color: var(--muted);
+  cursor: pointer; transition: all .15s;
+  white-space: nowrap;
+}
+.list-tab:hover { border-color: var(--primary); color: var(--primary); }
+.list-tab.active {
+  background: var(--primary); color: #fff;
+  border-color: var(--primary);
+}
+.list-tab .lt-icon { font-size: 16px; }
+.list-tab-new {
+  display: flex; align-items: center; gap: 5px;
+  padding: 7px 12px; border-radius: 20px;
+  border: 1.5px dashed var(--border);
+  background: transparent; color: var(--muted);
+  font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all .15s; font-family: inherit;
+}
+.list-tab-new:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-l); }
+
+/* ── KPI ── */
+.kpi-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 1.25rem; }
+@media(max-width:600px){ .kpi-row { grid-template-columns: 1fr 1fr; } }
+
+/* ── PERIOD TABS ── */
+.period-tabs { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; margin-bottom: 1.25rem; }
+.ptab { flex:1; padding:7px 6px; border:none; background:transparent; border-radius:7px; cursor:pointer; font-size:13px; font-weight:500; color:var(--muted); font-family:inherit; transition:all .15s; white-space:nowrap; }
+.ptab.active { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+
+/* ── BLOCO ── */
+.block { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: .875rem; overflow: hidden; }
+.block-header { padding: 10px 14px; display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; transition: background .1s; }
+.block-header:hover { background: var(--bg); }
+.block.open .block-header { border-bottom: 1px solid var(--border); }
+.block-title { flex:1; font-size:13px; font-weight:600; }
+.block-badge { font-size:11px; font-weight:600; padding:2px 8px; border-radius:20px; border:1px solid; white-space:nowrap; background:var(--primary-l); color:var(--primary); border-color:var(--primary-b); }
+.chevron { font-size:12px; color:var(--muted); transition:transform .2s; }
+.block.open .chevron { transform: rotate(180deg); }
+.block-body { display:none; }
+.block.open .block-body { display:block; }
+.prog-wrap { height:3px; background:var(--border); margin:0 14px 8px; }
+.prog-fill  { height:100%; background:var(--primary); border-radius:2px; transition:width .35s; }
+.why { background:var(--primary-l); border-bottom:1px solid var(--border); padding:7px 14px; font-size:11px; color:var(--primary); display:flex; gap:7px; align-items:flex-start; line-height:1.5; }
+
+/* ── TAREFA ── */
+.check-item { display:flex; align-items:flex-start; gap:10px; padding:9px 14px; border-bottom:1px solid var(--border); transition:background .1s; position:relative; }
+.check-item:last-of-type { border-bottom:none; }
+.check-item:hover { background:var(--bg); }
+.check-item.done { opacity:.45; }
+.check-item.done .check-label { text-decoration:line-through; }
+@keyframes flashOk{ 0%{background:var(--primary-l);}100%{background:transparent;} }
+.check-item.just-done { animation:flashOk .5s ease; }
+.checkbox { width:17px; height:17px; border:1.5px solid #ccc; border-radius:4px; flex-shrink:0; margin-top:2px; display:flex; align-items:center; justify-content:center; font-size:10px; color:#fff; cursor:pointer; transition:all .15s; }
+.check-item.done .checkbox { background:var(--primary); border-color:var(--primary); }
+.check-content { flex:1; cursor:pointer; min-width:0; }
+.check-label { font-size:13px; font-weight:500; line-height:1.4; }
+.check-sub   { font-size:11px; color:var(--muted); margin-top:3px; line-height:1.45; }
+.check-meta  { font-size:10px; color:var(--primary); margin-top:3px; font-style:italic; }
+
+/* responsável */
+.who-wrap { display:flex; align-items:center; gap:5px; flex-shrink:0; margin-top:2px; }
+.who-badge { font-size:11px; font-weight:600; padding:2px 8px; border-radius:20px; border:1px solid; white-space:nowrap; }
+.who-badge.clickable { cursor:pointer; transition:opacity .1s; }
+.who-badge.clickable:hover { opacity:.7; }
+.who-L  { background:var(--primary-l); color:var(--primary); border-color:var(--primary-b); }
+.who-S  { background:var(--purple-l);  color:var(--purple);  border-color:var(--purple-b); }
+.who-I  { background:var(--amber-l);   color:var(--amber);   border-color:var(--amber-b); }
+.who-LS { background:var(--blue-l);    color:var(--blue);    border-color:var(--blue-b); }
+
+/* ações inline */
+.item-actions { display:none; gap:3px; flex-shrink:0; margin-top:1px; }
+.check-item:hover .item-actions { display:flex; }
+.ia-btn { width:22px; height:22px; border-radius:5px; border:1px solid var(--border); background:var(--surface); cursor:pointer; font-size:11px; display:flex; align-items:center; justify-content:center; transition:all .15s; }
+.ia-btn:hover { background:var(--primary-l); border-color:var(--primary-b); }
+.ia-btn.del:hover { background:var(--red-l); border-color:var(--red-b); }
+
+/* edição inline */
+.check-item.editing .check-content { display:none; }
+.check-item.editing .item-edit { display:flex; }
+.check-item.editing .item-actions { display:none!important; }
+.item-edit { display:none; flex:1; flex-direction:column; gap:5px; padding:2px 0; }
+.ie-label { font-family:inherit; font-size:13px; font-weight:500; border:1.5px solid var(--primary); border-radius:6px; padding:5px 9px; outline:none; background:var(--surface); }
+.ie-sub   { font-family:inherit; font-size:11px; border:1px solid var(--border); border-radius:6px; padding:4px 9px; outline:none; background:var(--bg); color:var(--muted); }
+.ie-actions { display:flex; gap:5px; }
+.ie-save   { background:var(--primary); color:#fff; border:none; border-radius:6px; padding:4px 12px; font-size:12px; font-weight:500; cursor:pointer; font-family:inherit; }
+.ie-cancel { background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:4px 10px; font-size:12px; cursor:pointer; font-family:inherit; }
+
+/* add tarefa */
+.add-task-btn  { display:flex; align-items:center; gap:7px; padding:8px 14px; color:var(--muted); font-size:12px; cursor:pointer; border:none; background:transparent; width:100%; text-align:left; font-family:inherit; transition:all .15s; border-top:1px solid var(--border); }
+.add-task-btn:hover { background:var(--bg); color:var(--primary); }
+.add-task-form { padding:10px 14px; border-top:1px solid var(--border); display:none; flex-direction:column; gap:7px; }
+.add-task-form.open { display:flex; }
+.af-label  { font-family:inherit; font-size:13px; font-weight:500; border:1.5px solid var(--primary); border-radius:6px; padding:7px 11px; outline:none; background:var(--surface); }
+.af-sub    { font-family:inherit; font-size:12px; border:1px solid var(--border); border-radius:6px; padding:5px 11px; outline:none; background:var(--bg); color:var(--muted); }
+.af-row    { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.af-save   { background:var(--primary); color:#fff; border:none; border-radius:7px; padding:6px 14px; font-size:12px; font-weight:500; cursor:pointer; font-family:inherit; }
+.af-cancel { background:var(--bg); border:1px solid var(--border); border-radius:7px; padding:6px 10px; font-size:12px; cursor:pointer; font-family:inherit; }
+.af-owner  { font-size:12px; padding:5px 8px; border:1px solid var(--border); border-radius:6px; background:var(--bg); font-family:inherit; }
+
+/* add bloco */
+.add-block-btn { display:flex; align-items:center; gap:8px; padding:10px 14px; color:var(--muted); font-size:13px; cursor:pointer; border:1px dashed var(--border); background:transparent; width:100%; text-align:left; font-family:inherit; border-radius:var(--radius); transition:all .15s; margin-top:.5rem; }
+.add-block-btn:hover { border-color:var(--primary); color:var(--primary); background:var(--primary-l); }
+
+/* reset bar */
+.reset-bar { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:8px 12px; margin-bottom:1.25rem; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.reset-bar span { font-size:12px; color:var(--muted); flex:1; }
+.btn-reset { background:transparent; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:12px; color:var(--muted); cursor:pointer; font-family:inherit; transition:all .15s; }
+.btn-reset:hover { background:var(--red-l); color:var(--red); border-color:var(--red-b); }
+
+/* WS */
+.ws-dot { width:7px; height:7px; border-radius:50%; background:#4ade80; display:inline-block; transition:background .3s; }
+.ws-dot.off { background:#f87171; }
+.live-badge { font-size:10px; background:var(--primary-l); color:var(--primary); border:1px solid var(--primary-b); border-radius:20px; padding:2px 8px; display:inline-flex; align-items:center; gap:4px; }
+
+/* ações de bloco (aparecem no hover do header) */
+.block-actions { display:none; gap:4px; }
+.block-header:hover .block-actions { display:flex; }
+.ba-btn { width:22px; height:22px; border-radius:5px; border:1px solid rgba(255,255,255,.3); background:transparent; cursor:pointer; font-size:11px; display:flex; align-items:center; justify-content:center; transition:all .15s; color:var(--muted); }
+.ba-btn:hover { background:var(--primary-l); border-color:var(--primary-b); color:var(--primary); }
+.ba-btn.del:hover { background:var(--red-l); border-color:var(--red-b); color:var(--red); }
+
+/* loading */
+.loading-blocks { text-align:center; padding:3rem; color:var(--muted); }
+.loading-blocks .spinner { width:32px; height:32px; border:3px solid var(--border); border-top-color:var(--primary); border-radius:50%; animation:spin .7s linear infinite; margin:0 auto 1rem; }
+@keyframes spin { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-content">
+
+    <div class="page-header">
+      <h1>✅ Checklist</h1>
+      <div class="page-header-actions">
+        <span class="live-badge"><span class="ws-dot" id="wsDot"></span><span id="wsLabel">conectando...</span></span>
+      </div>
+    </div>
+
+    <div class="page-body">
+
+      <!-- LISTAS -->
+      <div class="lists-bar" id="listsBar">
+        <div style="font-size:12px;color:var(--muted)">Carregando listas...</div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-row">
+        <div class="kpi-card"><div class="kpi-label">Diário</div><div class="kpi-val kpi-neutral" id="kpiD">—</div><div class="kpi-sub">hoje</div></div>
+        <div class="kpi-card"><div class="kpi-label">Semanal</div><div class="kpi-val kpi-neutral" id="kpiW">—</div><div class="kpi-sub">esta semana</div></div>
+        <div class="kpi-card"><div class="kpi-label">Mensal</div><div class="kpi-val kpi-neutral" id="kpiM">—</div><div class="kpi-sub">este mês</div></div>
+        <div class="kpi-card"><div class="kpi-label">Trimestral</div><div class="kpi-val kpi-neutral" id="kpiQ">—</div><div class="kpi-sub">trimestre</div></div>
+      </div>
+
+      <!-- RESET -->
+      <div class="reset-bar" id="resetBar" style="display:none">
+        <span>Limpar progresso:</span>
+        <button class="btn-reset" onclick="resetPeriod('daily')">☀️ Diário</button>
+        <button class="btn-reset" onclick="resetPeriod('weekly')">📅 Semanal</button>
+        <button class="btn-reset" onclick="resetPeriod('monthly')">🗓️ Mensal</button>
+        <button class="btn-reset" onclick="resetPeriod('quarterly')">📊 Trimestral</button>
+      </div>
+
+      <!-- PERÍODOS -->
+      <div class="period-tabs">
+        <button class="ptab active" onclick="switchPeriod('daily')"     id="pt-daily">☀️ Diário</button>
+        <button class="ptab" onclick="switchPeriod('weekly')"    id="pt-weekly">📅 Semanal</button>
+        <button class="ptab" onclick="switchPeriod('monthly')"   id="pt-monthly">🗓️ Mensal</button>
+        <button class="ptab" onclick="switchPeriod('quarterly')" id="pt-quarterly">📊 Trimestral</button>
+      </div>
+
+      <!-- BLOCOS (renderizado dinamicamente) -->
+      <div id="blocksContainer">
+        <div class="loading-blocks"><div class="spinner"></div>Carregando...</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RESPONSÁVEL -->
+<div class="overlay" id="ownerModal" onclick="closeOnOverlay(event)">
+  <div class="modal" style="max-width:300px">
+    <h3>Alterar responsável</h3>
+    <div style="display:flex;flex-direction:column;gap:7px">
+      <button class="btn btn-secondary" onclick="setOwner('L','Luana','who-L')">🩰 Luana</button>
+      <button class="btn btn-secondary" onclick="setOwner('S','Silvio','who-S')">🤝 Silvio</button>
+      <button class="btn btn-secondary" onclick="setOwner('I','Isadora','who-I')">💼 Isadora</button>
+      <button class="btn btn-secondary" onclick="setOwner('LS','Ambos','who-LS')">👥 Ambos</button>
+    </div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('ownerModal')">Cancelar</button></div>
+  </div>
+</div>
+
+<!-- MODAL NOVA/EDITAR LISTA -->
+<div class="overlay" id="listModal" onclick="closeOnOverlay(event)">
+  <div class="modal" style="max-width:380px">
+    <h3 id="listModalTitle">Nova lista</h3>
+    <input type="hidden" id="lmEditId">
+    <div class="field">
+      <label class="lbl">Ícone + Nome</label>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="lmIcon" style="width:60px;text-align:center;font-size:18px" maxlength="2" placeholder="📋">
+        <input type="text" id="lmName" placeholder="Ex: Comercial, Operacional..." style="flex:1">
+      </div>
+    </div>
+    <div class="field">
+      <label class="lbl">Cor</label>
+      <div id="lmColors" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px"></div>
+      <input type="hidden" id="lmColor" value="#0F6E56">
+    </div>
+    <div class="field">
+      <label class="lbl">Descrição (opcional)</label>
+      <input type="text" id="lmDesc" placeholder="Ex: Rotinas comerciais e de atendimento">
+    </div>
+    <div id="lmErr" class="alert alert-error" style="display:none"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('listModal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveList()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NOVO/EDITAR BLOCO -->
+<div class="overlay" id="blockModal" onclick="closeOnOverlay(event)">
+  <div class="modal" style="max-width:420px">
+    <h3 id="blockModalTitle">Novo bloco</h3>
+    <input type="hidden" id="bmEditId">
+    <input type="hidden" id="bmListId">
+    <input type="hidden" id="bmPeriod">
+    <div class="field">
+      <label class="lbl">Ícone + Nome do bloco</label>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="bmIcon" style="width:60px;text-align:center;font-size:18px" maxlength="2" placeholder="📌">
+        <input type="text" id="bmName" placeholder="Ex: Manhã, Fechamento, Acompanhamento..." style="flex:1">
+      </div>
+    </div>
+    <div class="field">
+      <label class="lbl">Responsável / Etiqueta (opcional)</label>
+      <input type="text" id="bmBadge" placeholder="Ex: Luana, Todos, Isadora...">
+    </div>
+    <div class="field">
+      <label class="lbl">Texto informativo (opcional)</label>
+      <textarea id="bmWhy" rows="2" placeholder="Ex: Por que este bloco é importante..."></textarea>
+    </div>
+    <div id="bmErr" class="alert alert-error" style="display:none"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('blockModal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveBlock()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/shared.js"></script>
+<script>
+if (!Auth.requireLogin()) throw '';
+buildSidebar('checklist');
+
+const isGestor = ['admin','gestor'].includes(Auth.user().role);
+if (isGestor) document.getElementById('resetBar').style.display = 'flex';
+
+// ── ESTADO ────────────────────────────────────────────────────
+let allLists = [], currentListId = 1, currentPeriod = 'daily';
+let taskState = {}, ownerState = {};
+let _curOwnerBadge = null;
+
+const PERIODS = {
+  daily:     { icon:'☀️',  label:'Diário' },
+  weekly:    { icon:'📅', label:'Semanal' },
+  monthly:   { icon:'🗓️', label:'Mensal' },
+  quarterly: { icon:'📊', label:'Trimestral' },
+};
+
+const LIST_COLORS = ['#0F6E56','#185FA5','#534AB7','#854F0B','#993C1D','#3B6D11','#3D4B5C','#A32D2D'];
+
+// ── WEBSOCKET ─────────────────────────────────────────────────
+let ws, wsTimer;
+function connectWS() {
+  const proto = location.protocol==='https:'?'wss':'ws';
+  ws = new WebSocket(`${proto}://${location.host}/?token=${Auth.token()}`);
+  ws.onopen  = () => { document.getElementById('wsDot').classList.remove('off'); document.getElementById('wsLabel').textContent='ao vivo'; clearTimeout(wsTimer); };
+  ws.onclose = () => { document.getElementById('wsDot').classList.add('off'); document.getElementById('wsLabel').textContent='reconectando...'; wsTimer=setTimeout(connectWS,3000); };
+  ws.onmessage = e => {
+    const d = JSON.parse(e.data);
+    if (d.type==='task_toggle')  applyRemoteToggle(d);
+    if (d.type==='owner_change') applyRemoteOwner(d);
+    if (d.type==='period_reset') { loadState(); showToast(`${d.by} limpou o progresso.`,'info'); }
+  };
+}
+
+function applyRemoteToggle(d) {
+  if (d.done) taskState[d.task_id] = { done:true, user_name:d.user_name, done_at:d.done_at };
+  else delete taskState[d.task_id];
+  const el = document.querySelector(`[data-key="${d.task_id}"]`);
+  if (el) {
+    el.classList.toggle('done', d.done);
+    const meta = el.querySelector('.check-meta');
+    if (meta) meta.textContent = d.done ? `✓ ${d.user_name} · ${d.done_at}` : '';
+  }
+  updateProgress(); updateKPI();
+  showToast(`${d.user_name} ${d.done?'concluiu':'desmarcou'}: ${el?.querySelector('.check-label')?.textContent?.slice(0,35)||''}...`);
+}
+
+function applyRemoteOwner(d) {
+  ownerState[d.task_id] = { owner_code:d.owner_code, owner_label:d.owner_label, owner_cls:d.owner_cls };
+  const badge = document.querySelector(`.who-badge[data-key="${d.task_id}"]`);
+  if (badge) { badge.textContent = d.owner_label; badge.className = `who-badge clickable ${d.owner_cls}`; }
+}
+
+// ── CARREGAR ESTADO ───────────────────────────────────────────
+async function loadState() {
+  try {
+    const d = await API.get('/tasks/state');
+    taskState  = d.state || {};
+    ownerState = d.owners || {};
+    applyStateToDOM();
+    updateKPI();
+  } catch(e) { console.error('loadState:', e); }
+}
+
+function applyStateToDOM() {
+  document.querySelectorAll('.check-item').forEach(el => {
+    const key = el.dataset.key;
+    if (!key) return;
+    const s = taskState[key];
+    el.classList.toggle('done', !!(s?.done));
+    const meta = el.querySelector('.check-meta');
+    if (meta) meta.textContent = s?.done ? `✓ ${s.user_name} · ${s.done_at}` : '';
+    // aplicar owner
+    const o = ownerState[key];
+    if (o) {
+      const badge = el.querySelector('.who-badge');
+      if (badge) { badge.textContent = o.owner_label; badge.className = `who-badge clickable ${o.owner_cls}`; }
+    }
+  });
+}
+
+// ── LISTAS ────────────────────────────────────────────────────
+async function loadLists() {
+  allLists = await API.get('/checklists');
+  renderListsTabs();
+}
+
+function renderListsTabs() {
+  const bar = document.getElementById('listsBar');
+  bar.innerHTML = allLists.map(l => `
+    <div class="list-tab ${l.id===currentListId?'active':''}" onclick="selectList(${l.id})"
+         style="${l.id===currentListId?`background:${l.color};border-color:${l.color}`:''}">
+      <span class="lt-icon">${l.icon}</span>
+      <span>${l.name}</span>
+      ${isGestor && l.id!==1 ? `<span style="margin-left:2px;font-size:11px;opacity:.7" onclick="editList(event,${l.id})">✏️</span>` : ''}
+    </div>
+  `).join('') + (isGestor ? `
+    <button class="list-tab-new" onclick="openNewList()">＋ Nova lista</button>
+  ` : '');
+}
+
+async function selectList(id) {
+  currentListId = id;
+  renderListsTabs();
+  await loadBlocks();
+}
+
+// ── BLOCOS ────────────────────────────────────────────────────
+async function loadBlocks() {
+  document.getElementById('blocksContainer').innerHTML =
+    '<div class="loading-blocks"><div class="spinner"></div>Carregando...</div>';
+  try {
+    const blocks = await API.get(`/checklists/${currentListId}/content?period=${currentPeriod}`);
+    renderBlocks(blocks);
+    applyStateToDOM();
+    updateProgress();
+    updateKPI();
+  } catch(e) {
+    document.getElementById('blocksContainer').innerHTML =
+      '<div class="empty-state"><div class="empty-state-icon">📋</div><p>Erro ao carregar. Tente novamente.</p></div>';
+  }
+}
+
+function renderBlocks(blocks) {
+  const container = document.getElementById('blocksContainer');
+  if (!blocks.length) {
+    container.innerHTML = `
+      <div class="empty-state" style="padding:2.5rem">
+        <div class="empty-state-icon">${PERIODS[currentPeriod].icon}</div>
+        <p>Nenhum bloco neste período ainda.</p>
+        ${isGestor ? `<button class="btn btn-primary" style="margin-top:1rem" onclick="openNewBlock()">＋ Criar primeiro bloco</button>` : ''}
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = blocks.map((b, bi) => `
+    <div class="block open" id="block-${b.id}">
+      <div class="block-header" onclick="toggleBlock(${b.id})">
+        <span>${b.icon||'📌'}</span>
+        <span class="block-title">${b.name}</span>
+        ${b.badge_text ? `<span class="block-badge">${b.badge_text}</span>` : ''}
+        <div class="block-actions" onclick="event.stopPropagation()">
+          ${isGestor ? `<button class="ba-btn" onclick="openEditBlock(${b.id})" title="Editar bloco">✏️</button>` : ''}
+          ${isGestor && b.id>15 ? `<button class="ba-btn del" onclick="deleteBlock(${b.id})" title="Excluir bloco">🗑️</button>` : ''}
+        </div>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="block-body">
+        <div class="prog-wrap"><div class="prog-fill" id="prog-${b.id}" style="width:0%"></div></div>
+        ${b.why_text ? `<div class="why">ℹ️ &nbsp;${b.why_text}</div>` : ''}
+        <div id="list-${b.id}">
+          ${b.tasks.map(t => makeTaskEl(t)).join('')}
+        </div>
+        ${isGestor ? `
+          <button class="add-task-btn" onclick="showAddTask(${b.id})">＋ Adicionar tarefa</button>
+          <div class="add-task-form" id="add-${b.id}">
+            <input class="af-label" placeholder="Nome da tarefa...">
+            <input class="af-sub"   placeholder="Descrição (opcional)">
+            <div class="af-row">
+              <button class="af-save"   onclick="addTask(${b.id})">Adicionar</button>
+              <button class="af-cancel" onclick="hideAddTask(${b.id})">Cancelar</button>
+              <select class="af-owner" id="afown-${b.id}">
+                <option value="L|Luana|who-L">Luana</option>
+                <option value="S|Silvio|who-S">Silvio</option>
+                <option value="I|Isadora|who-I">Isadora</option>
+                <option value="LS|Ambos|who-LS" selected>Ambos</option>
+              </select>
+            </div>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `).join('') + (isGestor ? `
+    <button class="add-block-btn" onclick="openNewBlock()">
+      <span style="font-size:18px">＋</span> Adicionar bloco
+    </button>` : '');
+}
+
+function makeTaskEl(t) {
+  const s = taskState[t.task_key];
+  const o = ownerState[t.task_key];
+  const oc  = o?.owner_cls   || t.owner_cls   || 'who-LS';
+  const ol  = o?.owner_label || t.owner_label || 'Ambos';
+  const done = s?.done ? 'done' : '';
+  return `
+    <div class="check-item ${done}" data-key="${t.task_key}" data-tid="${t.id}" data-block="${t.block_id}" data-period="${currentPeriod}">
+      <div class="checkbox" onclick="toggleTask(this.parentElement)">✓</div>
+      <div class="check-content" onclick="toggleTask(this.parentElement)">
+        <div class="check-label">${t.label}</div>
+        ${t.sub?`<div class="check-sub">${t.sub}</div>`:''}
+        <div class="check-meta">${s?.done?`✓ ${s.user_name} · ${s.done_at}`:''}</div>
+      </div>
+      <div class="item-edit">
+        <input class="ie-label" value="${t.label.replace(/"/g,'&quot;')}" placeholder="Título">
+        <input class="ie-sub"   value="${(t.sub||'').replace(/"/g,'&quot;')}" placeholder="Descrição">
+        <div class="ie-actions">
+          <button class="ie-save"   onclick="saveTaskEdit(this,${t.id})">Salvar</button>
+          <button class="ie-cancel" onclick="cancelEdit(this)">Cancelar</button>
+        </div>
+      </div>
+      <div class="who-wrap">
+        <span class="who-badge ${oc} clickable" data-key="${t.task_key}" onclick="openOwnerModal(event,this)">${ol}</span>
+      </div>
+      ${isGestor ? `
+      <div class="item-actions">
+        <button class="ia-btn"     onclick="startEdit(this.closest('.check-item'))" title="Editar">✏️</button>
+        <button class="ia-btn del" onclick="deleteTask(${t.id},this.closest('.check-item'))" title="Excluir">🗑️</button>
+      </div>` : ''}
+    </div>`;
+}
+
+// ── TOGGLE TAREFA ─────────────────────────────────────────────
+async function toggleTask(el) {
+  const key    = el.dataset.key;
+  const period = el.dataset.period;
+  const done   = !el.classList.contains('done');
+  el.classList.toggle('done', done);
+  if (done) { el.classList.add('just-done'); setTimeout(()=>el.classList.remove('just-done'),500); }
+  const meta = el.querySelector('.check-meta');
+  if (meta) meta.textContent = done ? `✓ ${Auth.user().name} · agora` : '';
+  if (done) taskState[key] = { done:true, user_name:Auth.user().name, done_at:'agora' };
+  else delete taskState[key];
+  updateProgress(el.dataset.block);
+  updateKPI();
+  try { await API.post('/tasks/toggle', { task_id:key, period, done }); }
+  catch(e) { showToast('Erro ao salvar','error'); }
+}
+
+// ── PROGRESSO ─────────────────────────────────────────────────
+function updateProgress(blockId) {
+  const sel = blockId ? [`list-${blockId}`] : [...document.querySelectorAll('[id^="list-"]')].map(el=>el.id);
+  sel.forEach(lid => {
+    const list  = document.getElementById(lid);
+    if (!list) return;
+    const bid   = lid.replace('list-','');
+    const items = list.querySelectorAll('.check-item');
+    const done  = list.querySelectorAll('.check-item.done').length;
+    const bar   = document.getElementById('prog-'+bid);
+    if (bar) bar.style.width = (items.length ? done/items.length*100 : 0) + '%';
+  });
+}
+
+function updateKPI() {
+  const counts = { daily:0, weekly:0, monthly:0, quarterly:0 };
+  const totals  = { daily:0, weekly:0, monthly:0, quarterly:0 };
+  document.querySelectorAll('.check-item').forEach(el => {
+    const p = el.dataset.period;
+    if (!p) return;
+    totals[p]++;
+    if (el.classList.contains('done')) counts[p]++;
+  });
+  document.getElementById('kpiD').textContent = `${counts.daily}/${totals.daily||0}`;
+  document.getElementById('kpiW').textContent = `${counts.weekly}/${totals.weekly||0}`;
+  document.getElementById('kpiM').textContent = `${counts.monthly}/${totals.monthly||0}`;
+  document.getElementById('kpiQ').textContent = `${counts.quarterly}/${totals.quarterly||0}`;
+}
+
+// ── RESPONSÁVEL ───────────────────────────────────────────────
+function openOwnerModal(e, badge) {
+  e.stopPropagation();
+  if (!isGestor) { showToast('Apenas gestores podem alterar responsáveis.','info'); return; }
+  _curOwnerBadge = badge; openModal('ownerModal');
+}
+async function setOwner(code, label, cls) {
+  if (!_curOwnerBadge) return;
+  _curOwnerBadge.textContent = label; _curOwnerBadge.className = `who-badge clickable ${cls}`;
+  closeModal('ownerModal');
+  const key = _curOwnerBadge.dataset.key;
+  ownerState[key] = { owner_code:code, owner_label:label, owner_cls:cls };
+  await API.post('/tasks/owner', { task_id:key, owner_code:code, owner_label:label, owner_cls:cls });
+}
+
+// ── RESET ─────────────────────────────────────────────────────
+async function resetPeriod(period) {
+  const labels = {daily:'Diário',weekly:'Semanal',monthly:'Mensal',quarterly:'Trimestral'};
+  if (!await confirmAction(`Limpar progresso do checklist ${labels[period]} do período atual?`)) return;
+  await API.post('/tasks/reset', { period });
+  loadState(); showToast(`Progresso ${labels[period]} limpo.`,'info');
+}
+
+// ── UI ────────────────────────────────────────────────────────
+function switchPeriod(period) {
+  currentPeriod = period;
+  ['daily','weekly','monthly','quarterly'].forEach(p => {
+    document.getElementById('pt-'+p).classList.toggle('active', p===period);
+  });
+  loadBlocks();
+}
+function toggleBlock(id) { document.getElementById('block-'+id)?.classList.toggle('open'); }
+
+// ── EDIÇÃO INLINE TAREFA ──────────────────────────────────────
+function startEdit(el) {
+  if (!isGestor) { showToast('Apenas gestores podem editar.','info'); return; }
+  el.classList.add('editing');
+  el.querySelector('.ie-label').value = el.querySelector('.check-label').textContent;
+  el.querySelector('.ie-sub').value   = el.querySelector('.check-sub')?.textContent||'';
+  el.querySelector('.ie-label').focus();
+}
+function cancelEdit(btn) { btn.closest('.check-item').classList.remove('editing'); }
+async function saveTaskEdit(btn, taskId) {
+  const el    = btn.closest('.check-item');
+  const label = el.querySelector('.ie-label').value.trim();
+  const sub   = el.querySelector('.ie-sub').value.trim();
+  if (!label) return;
+  el.querySelector('.check-label').textContent = label;
+  const subEl = el.querySelector('.check-sub');
+  if (subEl) subEl.textContent = sub;
+  else if (sub) {
+    const meta = el.querySelector('.check-meta');
+    meta.insertAdjacentHTML('beforebegin', `<div class="check-sub">${sub}</div>`);
+  }
+  el.classList.remove('editing');
+  try { await API.put('/checklists/tasks/'+taskId, { label, sub, owner_code:'LS', owner_label:'Ambos', owner_cls:'who-LS' }); }
+  catch {}
+  showToast('Tarefa atualizada!','success');
+}
+
+// ── ADD / DELETE TAREFA ───────────────────────────────────────
+function showAddTask(blockId) { const f=document.getElementById('add-'+blockId); if(f){f.classList.add('open');f.querySelector('.af-label').focus();} }
+function hideAddTask(blockId) { const f=document.getElementById('add-'+blockId); if(f){f.classList.remove('open');f.querySelectorAll('input').forEach(i=>i.value='');} }
+
+async function addTask(blockId) {
+  const f     = document.getElementById('add-'+blockId);
+  const label = f.querySelector('.af-label').value.trim();
+  const sub   = f.querySelector('.af-sub').value.trim();
+  const own   = (document.getElementById('afown-'+blockId)?.value||'LS|Ambos|who-LS').split('|');
+  if (!label) { showToast('Digite o nome da tarefa.','error'); return; }
+  try {
+    const t = await API.post(`/checklists/blocks/${blockId}/tasks`, {
+      label, sub: sub||null, owner_code:own[0], owner_label:own[1], owner_cls:own[2]
+    });
+    hideAddTask(blockId);
+    // Adicionar no DOM
+    const list = document.getElementById('list-'+blockId);
+    const el = document.createElement('div');
+    el.innerHTML = makeTaskEl({ task_key:t.task_key, id:t.id, block_id:blockId, label, sub, owner_code:own[0], owner_label:own[1], owner_cls:own[2] });
+    list.appendChild(el.firstElementChild);
+    updateProgress(blockId); updateKPI();
+    showToast('Tarefa adicionada!','success');
+  } catch(e) { showToast(e.message,'error'); }
+}
+
+async function deleteTask(taskId, el) {
+  if (!await confirmAction('Remover esta tarefa?')) return;
+  try {
+    await API.delete('/checklists/tasks/'+taskId);
+    const blockId = el.dataset.block;
+    el.style.transition='opacity .2s'; el.style.opacity='0';
+    setTimeout(()=>{ el.remove(); updateProgress(blockId); updateKPI(); },220);
+    showToast('Tarefa removida.','info');
+  } catch(e) { showToast(e.message,'error'); }
+}
+
+// ── LISTAS ────────────────────────────────────────────────────
+function buildColorPicker() {
+  document.getElementById('lmColors').innerHTML = LIST_COLORS.map(c =>
+    `<div style="width:26px;height:26px;border-radius:50%;background:${c};cursor:pointer;border:2px solid transparent;transition:all .15s" onclick="selectListColor('${c}',this)" title="${c}"></div>`
+  ).join('');
+}
+
+function selectListColor(c, el) {
+  document.getElementById('lmColor').value = c;
+  document.querySelectorAll('#lmColors > div').forEach(d => d.style.borderColor='transparent');
+  el.style.borderColor = '#1a1a18';
+  el.style.transform = 'scale(1.2)';
+}
+
+function openNewList() {
+  document.getElementById('listModalTitle').textContent = 'Nova lista';
+  document.getElementById('lmEditId').value = '';
+  document.getElementById('lmName').value = '';
+  document.getElementById('lmIcon').value = '📋';
+  document.getElementById('lmDesc').value = '';
+  document.getElementById('lmColor').value = '#0F6E56';
+  document.getElementById('lmErr').style.display = 'none';
+  buildColorPicker();
+  openModal('listModal');
+}
+
+function editList(e, id) {
+  e.stopPropagation();
+  const l = allLists.find(x=>x.id===id);
+  if (!l) return;
+  document.getElementById('listModalTitle').textContent = 'Editar lista';
+  document.getElementById('lmEditId').value = id;
+  document.getElementById('lmName').value  = l.name;
+  document.getElementById('lmIcon').value  = l.icon;
+  document.getElementById('lmDesc').value  = l.description||'';
+  document.getElementById('lmColor').value = l.color;
+  document.getElementById('lmErr').style.display = 'none';
+  buildColorPicker();
+  openModal('listModal');
+}
+
+async function saveList() {
+  const editId = document.getElementById('lmEditId').value;
+  const body = {
+    name:  document.getElementById('lmName').value.trim(),
+    icon:  document.getElementById('lmIcon').value.trim()||'📋',
+    color: document.getElementById('lmColor').value,
+    description: document.getElementById('lmDesc').value.trim(),
+  };
+  const errEl = document.getElementById('lmErr');
+  errEl.style.display = 'none';
+  if (!body.name) { errEl.textContent='Nome obrigatório.'; errEl.style.display='flex'; return; }
+  try {
+    if (editId) await API.put('/checklists/'+editId, body);
+    else {
+      const r = await API.post('/checklists', body);
+      currentListId = r.id;
+    }
+    closeModal('listModal');
+    showToast(editId?'Lista atualizada!':'Lista criada!','success');
+    await loadLists();
+    await loadBlocks();
+  } catch(e) { errEl.textContent=e.message; errEl.style.display='flex'; }
+}
+
+// ── BLOCOS ────────────────────────────────────────────────────
+function openNewBlock() {
+  document.getElementById('blockModalTitle').textContent = 'Novo bloco';
+  document.getElementById('bmEditId').value  = '';
+  document.getElementById('bmListId').value  = currentListId;
+  document.getElementById('bmPeriod').value  = currentPeriod;
+  document.getElementById('bmName').value    = '';
+  document.getElementById('bmIcon').value    = '📌';
+  document.getElementById('bmBadge').value   = '';
+  document.getElementById('bmWhy').value     = '';
+  document.getElementById('bmErr').style.display = 'none';
+  openModal('blockModal');
+}
+
+function openEditBlock(blockId) {
+  // Pegar dados do bloco atual
+  const headerEl = document.querySelector(`#block-${blockId} .block-title`);
+  const badgeEl  = document.querySelector(`#block-${blockId} .block-badge`);
+  const iconEl   = document.querySelector(`#block-${blockId} .block-header span`);
+  const whyEl    = document.querySelector(`#block-${blockId} .why`);
+  document.getElementById('blockModalTitle').textContent = 'Editar bloco';
+  document.getElementById('bmEditId').value  = blockId;
+  document.getElementById('bmListId').value  = currentListId;
+  document.getElementById('bmPeriod').value  = currentPeriod;
+  document.getElementById('bmName').value    = headerEl?.textContent||'';
+  document.getElementById('bmIcon').value    = iconEl?.textContent||'📌';
+  document.getElementById('bmBadge').value   = badgeEl?.textContent||'';
+  document.getElementById('bmWhy').value     = whyEl?.textContent?.replace(/^ℹ️\s*/,'')||'';
+  document.getElementById('bmErr').style.display = 'none';
+  openModal('blockModal');
+}
+
+async function saveBlock() {
+  const editId = document.getElementById('bmEditId').value;
+  const listId = document.getElementById('bmListId').value;
+  const period = document.getElementById('bmPeriod').value;
+  const body = {
+    period,
+    name:       document.getElementById('bmName').value.trim(),
+    icon:       document.getElementById('bmIcon').value.trim()||'📌',
+    badge_text: document.getElementById('bmBadge').value.trim()||null,
+    why_text:   document.getElementById('bmWhy').value.trim()||null,
+  };
+  const errEl = document.getElementById('bmErr');
+  errEl.style.display = 'none';
+  if (!body.name) { errEl.textContent='Nome obrigatório.'; errEl.style.display='flex'; return; }
+  try {
+    if (editId) await API.put('/checklists/blocks/'+editId, body);
+    else await API.post(`/checklists/${listId}/blocks`, body);
+    closeModal('blockModal');
+    showToast(editId?'Bloco atualizado!':'Bloco criado!','success');
+    await loadBlocks();
+  } catch(e) { errEl.textContent=e.message; errEl.style.display='flex'; }
+}
+
+async function deleteBlock(blockId) {
+  if (!await confirmAction('Excluir este bloco e todas as suas tarefas?')) return;
+  try {
+    await API.delete('/checklists/blocks/'+blockId);
+    showToast('Bloco removido.','info');
+    await loadBlocks();
+  } catch(e) { showToast(e.message,'error'); }
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+async function init() {
+  await Promise.all([loadLists(), loadState()]);
+  await loadBlocks();
+  applyStateToDOM();
+  updateKPI();
+}
+
+connectWS();
+init();
+</script>
+</body>
+</html>

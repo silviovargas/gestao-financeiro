@@ -1,0 +1,11 @@
+node_modules/
+.env
+*.db
+*.db-shm
+*.db-wal
+*.db_bkp
+*.bak
+*.bak.*
+data/
+.DS_Store
+Thumbs.db

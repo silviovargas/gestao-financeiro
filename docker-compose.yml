@@ -1,0 +1,69 @@
+services:
+
+  # ── Proxy reverso + SSL automático ───────────────────────
+  nginx-proxy:
+    image: nginxproxy/nginx-proxy
+    container_name: gf-nginx-proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - nginx_certs:/etc/nginx/certs
+      - nginx_vhost:/etc/nginx/vhost.d
+      - nginx_html:/usr/share/nginx/html
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    networks:
+      - proxy
+
+  acme-companion:
+    image: nginxproxy/acme-companion
+    container_name: gf-acme
+    restart: always
+    depends_on:
+      - nginx-proxy
+    volumes:
+      - nginx_certs:/etc/nginx/certs
+      - nginx_vhost:/etc/nginx/vhost.d
+      - nginx_html:/usr/share/nginx/html
+      - acme_data:/etc/acme.sh
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - DEFAULT_EMAIL=${EMAIL}
+      - NGINX_PROXY_CONTAINER=gf-nginx-proxy
+    networks:
+      - proxy
+
+  # ── Aplicação ─────────────────────────────────────────────
+  app:
+    build: .
+    container_name: gf-app
+    restart: always
+    depends_on:
+      - nginx-proxy
+    volumes:
+      - app_data:/app/data
+    environment:
+      - VIRTUAL_HOST=${DOMAIN}
+      - VIRTUAL_PORT=3000
+      - LETSENCRYPT_HOST=${DOMAIN}
+      - LETSENCRYPT_EMAIL=${EMAIL}
+      - JWT_SECRET=${JWT_SECRET}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - APP_NAME=${APP_NAME:-Gestão Financeira}
+      - DB_PATH=/app/data/database.db
+      - NODE_ENV=production
+    networks:
+      - proxy
+
+volumes:
+  nginx_certs:
+  nginx_vhost:
+  nginx_html:
+  acme_data:
+  app_data:
+
+networks:
+  proxy:
+    driver: bridge
