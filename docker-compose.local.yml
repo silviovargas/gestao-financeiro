@@ -1,0 +1,19 @@
+services:
+  app:
+    build: .
+    container_name: gf-app
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - app_data:/app/data
+    environment:
+      - JWT_SECRET=${JWT_SECRET:-gf-local-secret}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@gestao.com}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-123456}
+      - APP_NAME=${APP_NAME:-Gestão Financeira}
+      - DB_PATH=/app/data/database.db
+      - NODE_ENV=production
+
+volumes:
+  app_data:
