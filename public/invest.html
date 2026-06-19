@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0F6E56">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="GF Ballet">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestão Financeira SL</title>
+<link rel="stylesheet" href="/css/global.css">
+<style>
+.rate-card { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.875rem 1rem;text-align:center; }
+.rate-val  { font-size:22px;font-weight:700;color:var(--teal);margin:4px 0; }
+.rate-label{ font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em; }
+.rate-date { font-size:10px;color:var(--muted);margin-top:2px; }
+.goal-card { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:10px; }
+.goal-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:8px; }
+.goal-name { font-size:14px;font-weight:600; }
+.goal-pct  { font-size:13px;font-weight:700;color:var(--teal); }
+.portfolio-type { font-size:10px;padding:2px 7px;border-radius:10px;border:1px solid; }
+.pt-tesouro  { background:var(--green-l);color:var(--green);border-color:var(--green-b); }
+.pt-acao     { background:var(--blue-l);color:var(--blue);border-color:var(--blue-b); }
+.pt-fii      { background:var(--amber-l);color:var(--amber);border-color:var(--amber-b); }
+.pt-rf       { background:var(--purple-l);color:var(--purple);border-color:var(--purple-b); }
+.pt-cripto   { background:var(--coral-l);color:var(--coral);border-color:var(--coral-b); }
+.pt-outro    { background:var(--bg);color:var(--muted);border-color:var(--border); }
+</style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-content">
+    <div class="page-header">
+      <h1>📈 Investimentos</h1>
+    </div>
+    <div class="page-body">
+
+      <!-- TAXAS OFICIAIS -->
+      <div style="margin-bottom:1rem">
+        <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem">
+          Taxas oficiais — Banco Central do Brasil <span id="ratesUpdated" style="font-weight:400;text-transform:none;font-size:10px"></span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px" id="ratesGrid">
+          <div class="rate-card"><div class="rate-label">Carregando...</div></div>
+        </div>
+      </div>
+
+      <!-- ABAS -->
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('goals')">🎯 Metas</button>
+        <button class="tab-btn" onclick="switchTab('portfolio')">💼 Carteira</button>
+        <button class="tab-btn" onclick="switchTab('simulate')">🧮 Simulador</button>
+        <button class="tab-btn" onclick="switchTab('tesouro')">🏛️ Tesouro Direto</button>
+        <button class="tab-btn" onclick="switchTab('quote')">📊 Cotações</button>
+      </div>
+
+      <!-- METAS -->
+      <div id="tab-goals">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">
+          <span style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Seus objetivos financeiros</span>
+          <button class="btn btn-secondary btn-sm" onclick="openModal('goalModal')">+ Meta</button>
+        </div>
+        <div id="goalsList"></div>
+      </div>
+
+      <!-- CARTEIRA -->
+      <div id="tab-portfolio" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">
+          <span style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Minha carteira de investimentos</span>
+          <button class="btn btn-secondary btn-sm" onclick="openModal('portfolioModal')">+ Ativo</button>
+        </div>
+        <div class="card" style="margin-bottom:1rem">
+          <div class="card-header"><span class="card-title">Resumo por tipo</span></div>
+          <div class="card-body" id="portfolioSummary"></div>
+        </div>
+        <div class="card"><div id="portfolioList"></div></div>
+      </div>
+
+      <!-- SIMULADOR -->
+      <div id="tab-simulate" style="display:none">
+        <div class="card">
+          <div class="card-header"><span class="card-title">🧮 Simulador de juros compostos</span></div>
+          <div class="card-body">
+            <div class="field-row">
+              <div class="field"><label class="lbl">Valor inicial (R$)</label><input type="number" id="simInitial" value="0" min="0" step="100"></div>
+              <div class="field"><label class="lbl">Aporte mensal (R$)</label><input type="number" id="simMonthly" value="500" min="0" step="100"></div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label class="lbl">Taxa anual (%)</label><input type="number" id="simRate" value="12" step="0.1" min="0"></div>
+              <div class="field"><label class="lbl">Período (meses)</label><input type="number" id="simMonths" value="60" min="1" max="600"></div>
+            </div>
+            <div class="field">
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn btn-sm btn-secondary" onclick="setSimRate(13.75)">Selic (≈13,75%)</button>
+                <button class="btn btn-sm btn-secondary" onclick="setSimRate(13.65)">CDI (≈13,65%)</button>
+                <button class="btn btn-sm btn-secondary" onclick="setSimRate(6)">IPCA+6%</button>
+                <button class="btn btn-sm btn-secondary" onclick="setSimRate(8)">Renda fixa 8%</button>
+                <button class="btn btn-sm btn-secondary" onclick="setSimRate(15)">Ações 15%</button>
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="runSimulation()">Simular</button>
+            <div id="simResult" style="margin-top:1.25rem"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TESOURO DIRETO -->
+      <div id="tab-tesouro" style="display:none">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">🏛️ Títulos disponíveis — Tesouro Direto</span>
+            <button class="btn btn-secondary btn-sm" onclick="loadTesouro()">↻ Atualizar</button>
+          </div>
+          <div id="tesouroList"><div style="padding:1.5rem;text-align:center;color:var(--muted)">Carregando...</div></div>
+        </div>
+      </div>
+
+      <!-- COTAÇÕES -->
+      <div id="tab-quote" style="display:none">
+        <div class="card" style="margin-bottom:1rem">
+          <div class="card-header"><span class="card-title">📊 Consultar ativo (ações e FIIs — B3)</span></div>
+          <div class="card-body">
+            <div style="display:flex;gap:8px">
+              <input type="text" id="quoteTicker" placeholder="Ex: PETR4, MXRF11, ITUB4" style="flex:1" onkeydown="if(event.key==='Enter')fetchQuote()">
+              <button class="btn btn-primary" onclick="fetchQuote()">Buscar</button>
+            </div>
+            <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+              <button class="btn btn-sm btn-secondary" onclick="quickQuote('PETR4')">PETR4</button>
+              <button class="btn btn-sm btn-secondary" onclick="quickQuote('VALE3')">VALE3</button>
+              <button class="btn btn-sm btn-secondary" onclick="quickQuote('ITUB4')">ITUB4</button>
+              <button class="btn btn-sm btn-secondary" onclick="quickQuote('MXRF11')">MXRF11</button>
+              <button class="btn btn-sm btn-secondary" onclick="quickQuote('HGLG11')">HGLG11</button>
+              <button class="btn btn-sm btn-secondary" onclick="quickQuote('BBDC4')">BBDC4</button>
+            </div>
+            <div id="quoteResult" style="margin-top:1rem"></div>
+          </div>
+        </div>
+        <div class="alert alert-info">
+          ℹ️ Cotações via BRAPI (dados da B3). Podem ter atraso de 15–20 minutos durante o pregão.
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODAL META -->
+<div class="overlay" id="goalModal" onclick="closeOnOverlay(event)">
+  <div class="modal">
+    <h3 id="goalModalTitle">Nova meta de investimento</h3>
+    <input type="hidden" id="goalEditId">
+    <div class="field"><label class="lbl">Nome da meta</label><input type="text" id="goalName" placeholder="Ex: Reserva de emergência, Aposentadoria..."></div>
+    <div class="field-row">
+      <div class="field"><label class="lbl">Valor alvo (R$)</label><input type="number" id="goalTarget" step="100" min="0"></div>
+      <div class="field"><label class="lbl">Valor atual (R$)</label><input type="number" id="goalCurrent" step="100" min="0" value="0"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label class="lbl">Aporte mensal (R$)</label><input type="number" id="goalMonthly" step="100" min="0" value="0"></div>
+      <div class="field"><label class="lbl">Data alvo</label><input type="date" id="goalDate"></div>
+    </div>
+    <div class="field"><label class="lbl">Categoria</label>
+      <select id="goalCategory">
+        <option value="emergencia">🛡️ Reserva de emergência</option>
+        <option value="aposentadoria">👴 Aposentadoria</option>
+        <option value="imovel">🏠 Imóvel</option>
+        <option value="viagem">✈️ Viagem</option>
+        <option value="educacao">📚 Educação</option>
+        <option value="veiculo">🚗 Veículo</option>
+        <option value="geral">🎯 Geral</option>
+      </select>
+    </div>
+    <div class="field"><label class="lbl">Observações</label><textarea id="goalNotes" rows="2" placeholder="Opcional..."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('goalModal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveGoal()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ATIVO CARTEIRA -->
+<div class="overlay" id="portfolioModal" onclick="closeOnOverlay(event)">
+  <div class="modal">
+    <h3 id="portModalTitle">Novo ativo na carteira</h3>
+    <input type="hidden" id="portEditId">
+    <div class="field-row">
+      <div class="field"><label class="lbl">Nome</label><input type="text" id="portName" placeholder="Ex: Tesouro IPCA+ 2035"></div>
+      <div class="field"><label class="lbl">Ticker (opcional)</label><input type="text" id="portTicker" placeholder="Ex: PETR4, MXRF11"></div>
+    </div>
+    <div class="field"><label class="lbl">Tipo</label>
+      <select id="portType">
+        <option value="tesouro">🏛️ Tesouro Direto</option>
+        <option value="rf">📊 Renda Fixa (CDB, LCI, LCA)</option>
+        <option value="acao">📈 Ação</option>
+        <option value="fii">🏢 FII (Fundo Imobiliário)</option>
+        <option value="cripto">₿ Criptomoeda</option>
+        <option value="outro">📦 Outro</option>
+      </select>
+    </div>
+    <div class="field-row">
+      <div class="field"><label class="lbl">Quantidade</label><input type="number" id="portQty" step="0.001" min="0"></div>
+      <div class="field"><label class="lbl">Preço médio (R$)</label><input type="number" id="portAvgPrice" step="0.01" min="0"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label class="lbl">Total investido (R$)</label><input type="number" id="portInvested" step="0.01" min="0"></div>
+      <div class="field"><label class="lbl">Preço atual (R$)</label><input type="number" id="portCurrentPrice" step="0.01" min="0"></div>
+    </div>
+    <div class="field"><label class="lbl">Observações</label><textarea id="portNotes" rows="2" placeholder="Opcional..."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('portfolioModal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="savePortfolio()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/shared.js"></script>
+<script>
+if (!Auth.requireLogin()) throw '';
+if (!Auth.hasPerm('invest','view')) { window.location.href='/home'; throw ''; }
+buildSidebar('invest');
+
+function switchTab(id) {
+  ['goals','portfolio','simulate','tesouro','quote'].forEach(t => {
+    document.getElementById('tab-'+t).style.display = t===id?'':'none';
+  });
+  document.querySelectorAll('.tab-btn').forEach((b,i) => {
+    b.classList.toggle('active', ['goals','portfolio','simulate','tesouro','quote'][i]===id);
+  });
+  if (id==='portfolio') loadPortfolio();
+  if (id==='tesouro')   loadTesouro();
+}
+
+// ── TAXAS ──────────────────────────────────────────────────────
+async function loadRates() {
+  try {
+    const r = await API.get('/invest/rates');
+    document.getElementById('ratesUpdated').textContent = r.updated ? `· Atualizado: ${r.updated}` : '';
+    document.getElementById('ratesGrid').innerHTML = `
+      <div class="rate-card"><div class="rate-label">Selic</div><div class="rate-val">${r.selic?.value?.toFixed(2)||'—'}%</div><div class="rate-date">a.a. · ${r.selic?.date||''}</div></div>
+      <div class="rate-card"><div class="rate-label">CDI</div><div class="rate-val">${r.cdi?.value?.toFixed(2)||'—'}%</div><div class="rate-date">a.a. · ${r.cdi?.date||''}</div></div>
+      <div class="rate-card"><div class="rate-label">IPCA</div><div class="rate-val">${r.ipca?.value?.toFixed(2)||'—'}%</div><div class="rate-date">mensal · ${r.ipca?.date||''}</div></div>
+      ${r.cached ? '<div class="rate-card" style="grid-column:1/-1;font-size:11px;color:var(--muted);padding:.5rem">⚠️ Dados em cache — sem conexão com o Banco Central</div>' : ''}
+    `;
+  } catch {
+    document.getElementById('ratesGrid').innerHTML = '<div style="color:var(--muted);font-size:12px">Não foi possível carregar as taxas.</div>';
+  }
+}
+
+// ── METAS ──────────────────────────────────────────────────────
+async function loadGoals() {
+  const goals = await API.get('/invest/goals');
+  const el = document.getElementById('goalsList');
+  if (!goals.length) { el.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🎯</div><p>Nenhuma meta cadastrada.</p></div>'; return; }
+
+  const CAT_ICONS = { emergencia:'🛡️', aposentadoria:'👴', imovel:'🏠', viagem:'✈️', educacao:'📚', veiculo:'🚗', geral:'🎯' };
+  el.innerHTML = goals.map(g => {
+    const pct = Math.min(100, Math.round(g.current_amount/g.target_amount*100));
+    const remaining = g.target_amount - g.current_amount;
+    const monthsLeft = g.monthly_contribution > 0 ? Math.ceil(remaining/g.monthly_contribution) : null;
+    return `
+      <div class="goal-card">
+        <div class="goal-header">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:20px">${CAT_ICONS[g.category]||'🎯'}</span>
+            <div>
+              <div class="goal-name">${g.name}</div>
+              ${g.target_date ? `<div style="font-size:11px;color:var(--muted)">Prazo: ${Fmt.date(g.target_date)}</div>` : ''}
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div class="goal-pct">${pct}%</div>
+            <div style="font-size:11px;color:var(--muted)">${Fmt.brl(g.current_amount)} / ${Fmt.brl(g.target_amount)}</div>
+          </div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${pct>=100?'var(--green)':pct>=70?'var(--teal)':pct>=40?'var(--amber)':'var(--red)'}"></div></div>
+        <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:var(--muted)">
+          <span>Faltam: <strong>${Fmt.brl(remaining)}</strong></span>
+          ${g.monthly_contribution>0 ? `<span>Aporte: <strong>${Fmt.brl(g.monthly_contribution)}/mês</strong></span>` : ''}
+          ${monthsLeft ? `<span>Estimativa: <strong>${monthsLeft} meses</strong></span>` : ''}
+        </div>
+        ${Auth.hasPerm('invest','edit') ? `
+        <div style="display:flex;gap:6px;margin-top:10px">
+          <button class="btn btn-sm btn-secondary" onclick="openEditGoal(${g.id})">✏️ Editar</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteGoal(${g.id})">🗑️ Excluir</button>
+        </div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+async function openEditGoal(id) {
+  const goals = await API.get('/invest/goals');
+  const g = goals.find(x=>x.id===id);
+  if (!g) return;
+  document.getElementById('goalModalTitle').textContent = 'Editar meta';
+  document.getElementById('goalEditId').value = id;
+  document.getElementById('goalName').value = g.name;
+  document.getElementById('goalTarget').value = g.target_amount;
+  document.getElementById('goalCurrent').value = g.current_amount;
+  document.getElementById('goalMonthly').value = g.monthly_contribution;
+  document.getElementById('goalDate').value = g.target_date||'';
+  document.getElementById('goalCategory').value = g.category||'geral';
+  document.getElementById('goalNotes').value = g.notes||'';
+  openModal('goalModal');
+}
+
+async function saveGoal() {
+  const editId = document.getElementById('goalEditId').value;
+  const body = {
+    name: document.getElementById('goalName').value,
+    target_amount: document.getElementById('goalTarget').value,
+    current_amount: document.getElementById('goalCurrent').value,
+    monthly_contribution: document.getElementById('goalMonthly').value,
+    target_date: document.getElementById('goalDate').value||null,
+    category: document.getElementById('goalCategory').value,
+    notes: document.getElementById('goalNotes').value,
+  };
+  try {
+    if (editId) { await API.put('/invest/goals/'+editId, body); }
+    else        { await API.post('/invest/goals', body); }
+    closeModal('goalModal');
+    document.getElementById('goalEditId').value='';
+    document.getElementById('goalModalTitle').textContent='Nova meta de investimento';
+    showToast('Meta salva!','success');
+    loadGoals();
+  } catch(e) { showToast(e.message,'error'); }
+}
+
+async function deleteGoal(id) {
+  if (!await confirmAction('Excluir esta meta?')) return;
+  await API.delete('/invest/goals/'+id);
+  showToast('Meta excluída.'); loadGoals();
+}
+
+// ── CARTEIRA ───────────────────────────────────────────────────
+async function loadPortfolio() {
+  const items = await API.get('/invest/portfolio');
+  const list = document.getElementById('portfolioList');
+  if (!items.length) { list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">💼</div><p>Nenhum ativo cadastrado.</p></div>'; return; }
+
+  const totalInvested = items.reduce((s,i)=>s+i.invested_amount,0);
+  const totalCurrent  = items.reduce((s,i)=>s+(i.current_price&&i.quantity?i.current_price*i.quantity:i.invested_amount),0);
+  const gain = totalCurrent - totalInvested;
+
+  // Resumo por tipo
+  const byType = {};
+  items.forEach(i => { if(!byType[i.type]) byType[i.type]=0; byType[i.type]+=i.invested_amount; });
+  const TYPE_LABELS = { tesouro:'Tesouro Direto', rf:'Renda Fixa', acao:'Ações', fii:'FIIs', cripto:'Cripto', outro:'Outro' };
+  document.getElementById('portfolioSummary').innerHTML = `
+    <div style="display:flex;justify-content:space-around;flex-wrap:wrap;gap:12px;margin-bottom:1rem">
+      <div style="text-align:center"><div style="font-size:11px;color:var(--muted)">Total investido</div><div style="font-size:18px;font-weight:700">${Fmt.brl(totalInvested)}</div></div>
+      <div style="text-align:center"><div style="font-size:11px;color:var(--muted)">Valor atual</div><div style="font-size:18px;font-weight:700">${Fmt.brl(totalCurrent)}</div></div>
+      <div style="text-align:center"><div style="font-size:11px;color:var(--muted)">Rendimento</div><div style="font-size:18px;font-weight:700" class="${gain>=0?'val-positive':'val-negative'}">${gain>=0?'+':''}${Fmt.brl(gain)}</div></div>
+    </div>
+    ${Object.entries(byType).map(([type,val]) => {
+      const pct = Math.round(val/totalInvested*100);
+      return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span style="font-size:12px;width:130px">${TYPE_LABELS[type]||type}</span>
+        <div style="flex:1"><div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:var(--teal)"></div></div></div>
+        <span style="font-size:12px;font-weight:600;width:60px;text-align:right">${pct}%</span>
+        <span style="font-size:12px;color:var(--muted);width:100px;text-align:right">${Fmt.brl(val)}</span>
+      </div>`;
+    }).join('')}
+  `;
+
+  const TYPE_CLS = { tesouro:'pt-tesouro', acao:'pt-acao', fii:'pt-fii', rf:'pt-rf', cripto:'pt-cripto', outro:'pt-outro' };
+  list.innerHTML = items.map(i => {
+    const currentVal = i.current_price&&i.quantity ? i.current_price*i.quantity : i.invested_amount;
+    const gain = currentVal - i.invested_amount;
+    return `
+      <div class="tx-row">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:13px;font-weight:600">${i.name}</span>
+            ${i.ticker ? `<span style="font-size:10px;background:var(--bg);border:1px solid var(--border);padding:1px 6px;border-radius:4px">${i.ticker}</span>` : ''}
+            <span class="portfolio-type ${TYPE_CLS[i.type]||'pt-outro'}">${{tesouro:'Tesouro',rf:'Renda Fixa',acao:'Ação',fii:'FII',cripto:'Cripto',outro:'Outro'}[i.type]}</span>
+          </div>
+          ${i.quantity ? `<div style="font-size:11px;color:var(--muted)">Qtd: ${i.quantity} · Preço médio: ${Fmt.brl(i.avg_price||0)}</div>` : ''}
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:13px;font-weight:600">${Fmt.brl(currentVal)}</div>
+          <div style="font-size:11px" class="${gain>=0?'val-positive':'val-negative'}">${gain>=0?'+':''}${Fmt.brl(gain)}</div>
+        </div>
+        ${Auth.hasPerm('invest','edit') ? `
+        <div style="display:flex;gap:4px;margin-left:8px">
+          <button class="btn-icon" onclick="openEditPort(${i.id})">✏️</button>
+          <button class="btn-icon" onclick="deletePort(${i.id})">🗑️</button>
+        </div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+async function openEditPort(id) {
+  const items = await API.get('/invest/portfolio');
+  const i = items.find(x=>x.id===id);
+  if (!i) return;
+  document.getElementById('portModalTitle').textContent = 'Editar ativo';
+  document.getElementById('portEditId').value = id;
+  document.getElementById('portName').value = i.name;
+  document.getElementById('portTicker').value = i.ticker||'';
+  document.getElementById('portType').value = i.type;
+  document.getElementById('portQty').value = i.quantity||'';
+  document.getElementById('portAvgPrice').value = i.avg_price||'';
+  document.getElementById('portInvested').value = i.invested_amount||'';
+  document.getElementById('portCurrentPrice').value = i.current_price||'';
+  document.getElementById('portNotes').value = i.notes||'';
+  openModal('portfolioModal');
+}
+
+async function savePortfolio() {
+  const editId = document.getElementById('portEditId').value;
+  const body = {
+    name: document.getElementById('portName').value,
+    ticker: document.getElementById('portTicker').value||null,
+    type: document.getElementById('portType').value,
+    quantity: document.getElementById('portQty').value||null,
+    avg_price: document.getElementById('portAvgPrice').value||null,
+    invested_amount: document.getElementById('portInvested').value||0,
+    current_price: document.getElementById('portCurrentPrice').value||null,
+    notes: document.getElementById('portNotes').value,
+  };
+  try {
+    if (editId) { await API.put('/invest/portfolio/'+editId, body); }
+    else        { await API.post('/invest/portfolio', body); }
+    closeModal('portfolioModal');
+    document.getElementById('portEditId').value='';
+    document.getElementById('portModalTitle').textContent='Novo ativo na carteira';
+    showToast('Ativo salvo!','success'); loadPortfolio();
+  } catch(e) { showToast(e.message,'error'); }
+}
+
+async function deletePort(id) {
+  if (!await confirmAction('Remover este ativo da carteira?')) return;
+  await API.delete('/invest/portfolio/'+id);
+  showToast('Ativo removido.'); loadPortfolio();
+}
+
+// ── SIMULADOR ──────────────────────────────────────────────────
+function setSimRate(v) { document.getElementById('simRate').value = v; }
+
+async function runSimulation() {
+  const body = {
+    initial: document.getElementById('simInitial').value,
+    monthly: document.getElementById('simMonthly').value,
+    rate_annual: document.getElementById('simRate').value,
+    months: document.getElementById('simMonths').value,
+  };
+  try {
+    const r = await API.post('/invest/simulate', body);
+    const months = parseInt(body.months);
+    document.getElementById('simResult').innerHTML = `
+      <div class="kpi-grid" style="margin-bottom:1rem">
+        <div class="kpi-card"><div class="kpi-label">Valor final</div><div class="kpi-val kpi-positive">${Fmt.brl(r.final)}</div><div class="kpi-sub">em ${months} meses (${Math.round(months/12*10)/10} anos)</div></div>
+        <div class="kpi-card"><div class="kpi-label">Total investido</div><div class="kpi-val kpi-neutral">${Fmt.brl(r.total_invested)}</div><div class="kpi-sub">seu dinheiro</div></div>
+        <div class="kpi-card"><div class="kpi-label">Rendimento</div><div class="kpi-val kpi-positive">+${Fmt.brl(r.earnings)}</div><div class="kpi-sub">juros compostos</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Evolução do patrimônio</span></div>
+        <div class="card-body">
+          ${r.series.map((s,idx) => {
+            const pct = Math.round(s.balance/r.final*100);
+            return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <span style="font-size:12px;color:var(--muted);width:70px">Mês ${s.month}</span>
+              <div style="flex:1"><div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:var(--teal)"></div></div></div>
+              <span style="font-size:12px;font-weight:600;width:110px;text-align:right">${Fmt.brl(s.balance)}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  } catch(e) { showToast(e.message,'error'); }
+}
+
+// ── TESOURO ────────────────────────────────────────────────────
+async function loadTesouro() {
+  document.getElementById('tesouroList').innerHTML = '<div style="padding:1.5rem;text-align:center;color:var(--muted)">Consultando Tesouro Direto...</div>';
+  try {
+    const r = await API.get('/invest/tesouro');
+    if (!r.bonds?.length) { document.getElementById('tesouroList').innerHTML = '<div style="padding:1.5rem;text-align:center;color:var(--muted)">Nenhum título disponível no momento.</div>'; return; }
+    document.getElementById('tesouroList').innerHTML = `
+      ${r.cached ? '<div class="alert alert-warning" style="margin:12px 12px 0">⚠️ Dados em cache — sem conexão com o Tesouro Direto</div>' : ''}
+      <div style="padding:8px 12px;font-size:11px;color:var(--muted)">Atualizado: ${r.updated}</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Título</th><th>Vencimento</th><th>Taxa anual</th><th>Preço unitário</th><th>Mínimo</th></tr></thead>
+          <tbody>
+            ${r.bonds.map(b => `<tr>
+              <td style="font-weight:500">${b.name||'—'}</td>
+              <td>${b.maturity ? Fmt.date(b.maturity) : '—'}</td>
+              <td style="color:var(--teal);font-weight:600">${b.rate ? b.rate.toFixed(2)+'%' : '—'}</td>
+              <td>${b.unitPrice ? Fmt.brl(b.unitPrice) : '—'}</td>
+              <td>${b.minPrice ? Fmt.brl(b.minPrice) : '—'}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch {
+    document.getElementById('tesouroList').innerHTML = '<div style="padding:1.5rem;text-align:center;color:var(--red)">Erro ao consultar o Tesouro Direto. Verifique sua conexão.</div>';
+  }
+}
+
+// ── COTAÇÕES ───────────────────────────────────────────────────
+function quickQuote(t) { document.getElementById('quoteTicker').value=t; fetchQuote(); }
+
+async function fetchQuote() {
+  const ticker = document.getElementById('quoteTicker').value.trim().toUpperCase();
+  if (!ticker) return;
+  const el = document.getElementById('quoteResult');
+  el.innerHTML = '<div style="color:var(--muted)">Buscando cotação...</div>';
+  try {
+    const q = await API.get('/invest/quote/'+ticker);
+    const change = q.change || 0;
+    el.innerHTML = `
+      <div class="card" style="padding:1rem">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
+          <div>
+            <div style="font-size:16px;font-weight:700">${q.ticker}</div>
+            <div style="font-size:12px;color:var(--muted)">${q.name||''}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:22px;font-weight:700">${Fmt.brl(q.price)}</div>
+            <div style="font-size:13px;font-weight:600" class="${change>=0?'val-positive':'val-negative'}">${change>=0?'▲':'▼'} ${Math.abs(change).toFixed(2)}%</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:16px;font-size:12px;color:var(--muted)">
+          <span>Mínima: <strong>${Fmt.brl(q.low)}</strong></span>
+          <span>Máxima: <strong>${Fmt.brl(q.high)}</strong></span>
+          <span>Atualizado: <strong>${q.updated}</strong></span>
+          ${q.cached ? '<span style="color:var(--amber)">⚠️ Cache</span>' : ''}
+        </div>
+      </div>
+    `;
+  } catch(e) {
+    el.innerHTML = `<div class="alert alert-error">❌ ${e.message}</div>`;
+  }
+}
+
+// ── INIT ────────────────────────────────────────────────────────
+loadRates();
+loadGoals();
+</script>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(e=>console.warn(e));}</script>
+</body>
+</html>

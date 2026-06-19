@@ -1,0 +1,98 @@
+// ── Service Worker — Gestão Financeira SL ──────────────────
+const CACHE = 'gf-sl-v10';
+const STATIC = [
+  '/',
+  '/home',
+  '/app',
+  '/finance',
+  '/relatorios',
+  '/categorias',
+  '/invest',
+  '/planejamento',
+  '/contas',
+  '/perfil',
+  '/css/global.css',
+  '/js/shared.js',
+  '/manifest.json',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+];
+
+// Instalar: pré-cachear estáticos
+self.addEventListener('install', e => {
+  e.waitUntil(
+    caches.open(CACHE).then(c => c.addAll(STATIC.map(u => new Request(u, {cache:'reload'}))))
+      .catch(() => {}) // não falhar na instalação se algum recurso não carregar
+  );
+  self.skipWaiting();
+});
+
+// Ativar: limpar caches antigos
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+    )
+  );
+  self.clients.claim();
+});
+
+// Fetch: estratégia por tipo de requisição
+self.addEventListener('fetch', e => {
+  const url = new URL(e.request.url);
+
+  // API: sempre rede (sem cache)
+  if (url.pathname.startsWith('/api/')) {
+    e.respondWith(
+      fetch(e.request).catch(() =>
+        new Response(JSON.stringify({error:'Sem conexão com o servidor'}),
+          {status:503, headers:{'Content-Type':'application/json'}})
+      )
+    );
+    return;
+  }
+
+  // WebSocket: ignorar
+  if (e.request.url.startsWith('ws://') || e.request.url.startsWith('wss://')) return;
+
+  // Estáticos: cache primeiro, rede como fallback
+  e.respondWith(
+    caches.match(e.request).then(cached => {
+      if (cached) return cached;
+      return fetch(e.request).then(response => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+        }
+        return response;
+      }).catch(() => {
+        // Offline fallback para páginas HTML
+        if (e.request.destination === 'document') {
+          return caches.match('/') || new Response(
+            '<h2>Sem conexão</h2><p>Conecte-se à rede do Ballet para usar o sistema.</p>',
+            {headers:{'Content-Type':'text/html'}}
+          );
+        }
+      });
+    })
+  );
+});
+
+// Push notifications (para alertas de vencimento)
+self.addEventListener('push', e => {
+  const data = e.data?.json() || {title:'GF Ballet', body:'Nova notificação'};
+  e.waitUntil(
+    self.registration.showNotification(data.title, {
+      body:    data.body,
+      icon:    '/icons/icon-192.png',
+      badge:   '/icons/icon-96.png',
+      vibrate: [200, 100, 200],
+      data:    data.url || '/',
+    })
+  );
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(clients.openWindow(e.notification.data));
+});

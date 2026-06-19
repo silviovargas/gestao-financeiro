@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0F6E56">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="GF Ballet">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestão Financeira SL — Login</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--p:#0F6E56;--pd:#085041;--text:#1a1a18;--muted:#5a5a56;--border:#e0e0d8;--bg:#f7f7f4;--red:#A32D2D;--rl:#FCEBEB;--rb:#F7C1C1;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem;}
+.card{background:#fff;border:1px solid var(--border);border-radius:18px;padding:2.5rem 2rem;width:100%;max-width:380px;box-shadow:0 4px 32px rgba(0,0,0,.08);}
+.logo{text-align:center;margin-bottom:2rem;}
+.logo-icon{width:60px;height:60px;background:var(--p);border-radius:16px;display:inline-flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:1rem;box-shadow:0 4px 16px rgba(15,110,86,.3);}
+.logo h1{font-family:'DM Serif Display',serif;font-size:21px;color:var(--text);margin-bottom:4px;}
+.logo p{font-size:12px;color:var(--muted);}
+label{display:block;font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px;}
+.field{margin-bottom:1rem;}
+input{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;color:var(--text);background:var(--bg);outline:none;transition:all .15s;}
+input:focus{border-color:var(--p);background:#fff;box-shadow:0 0 0 3px rgba(15,110,86,.1);}
+.btn{width:100%;padding:11px;background:var(--p);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:.5rem;}
+.btn:hover{background:var(--pd);}
+.btn:active{transform:scale(.98);}
+.btn:disabled{opacity:.6;cursor:not-allowed;}
+.err{background:var(--rl);border:1px solid var(--rb);color:var(--red);border-radius:8px;padding:9px 13px;font-size:12px;margin-top:.875rem;display:none;}
+.hint{text-align:center;font-size:11px;color:var(--muted);margin-top:1.5rem;border-top:1px solid var(--border);padding-top:1rem;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon">💼</div>
+    <h1>Gestão Financeira SL</h1>
+    <p>Sistema interno · Acesso restrito</p>
+  </div>
+  <div class="field"><label>E-mail</label><input type="email" id="email" placeholder="seu@email.com" autocomplete="email"></div>
+  <div class="field"><label>Senha</label><input type="password" id="password" placeholder="••••••••" autocomplete="current-password"></div>
+  <button class="btn" id="btn" onclick="doLogin()">Entrar</button>
+  <div class="err" id="err"></div>
+  <div class="hint">Gestão Financeira SL · v3.0</div>
+</div>
+<script>
+document.addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+// Verificar sessão ativa (suporta ambos os tokens)
+;(function(){
+  const t = localStorage.getItem('gf_token') || localStorage.getItem('ballet_token');
+  if (!t) return;
+  try {
+    const p = JSON.parse(atob(t.split('.')[1]));
+    if (p.exp * 1000 > Date.now()) {
+      // Garantir que gf_token está definido
+      if (!localStorage.getItem('gf_token')) localStorage.setItem('gf_token', t);
+      window.location.href = '/home';
+    }
+  } catch {}
+})();
+
+async function doLogin() {
+  const email = document.getElementById('email').value.trim();
+  const pwd   = document.getElementById('password').value;
+  const errEl = document.getElementById('err');
+  const btn   = document.getElementById('btn');
+  errEl.style.display = 'none';
+  if (!email || !pwd) { showErr('Preencha e-mail e senha.'); return; }
+  btn.disabled = true; btn.textContent = 'Entrando...';
+  try {
+    const r = await fetch('/api/auth/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pwd })
+    });
+    const d = await r.json();
+    if (!r.ok) { showErr(d.error || 'Erro ao fazer login'); return; }
+    // Salvar em ambos para compatibilidade
+    localStorage.setItem('gf_token',  d.token);
+    localStorage.setItem('gf_user',   JSON.stringify(d.user));
+    localStorage.setItem('gf_perms',  JSON.stringify(d.perms || {}));
+    localStorage.setItem('ballet_token', d.token);
+    localStorage.setItem('ballet_user',  JSON.stringify(d.user));
+    localStorage.setItem('ballet_perms', JSON.stringify(d.perms || {}));
+    if (d.user?.theme_color) localStorage.setItem('gf_theme', d.user.theme_color);
+    window.location.href = '/home';
+  } catch { showErr('Erro de conexão com o servidor.'); }
+  finally { btn.disabled = false; btn.textContent = 'Entrar'; }
+}
+
+function showErr(m) { const e=document.getElementById('err'); e.textContent=m; e.style.display='block'; }
+</script>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(e=>console.warn(e));}</script>
+  <div id="pwaBar" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#0F6E56;color:#fff;padding:12px 16px;z-index:9999;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 -2px 12px rgba(0,0,0,.2)"><div><div style="font-size:13px;font-weight:600">Instalar como app</div><div style="font-size:11px;opacity:.8">Acesse da tela inicial</div></div><div style="display:flex;gap:8px"><button onclick="pwaInstall()" style="background:#fff;color:#0F6E56;border:none;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer">Instalar</button><button onclick="document.getElementById('pwaBar').style.display='none'" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:8px;padding:8px 12px;cursor:pointer">X</button></div></div><script>var _p=null;window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();_p=e;document.getElementById('pwaBar').style.display='flex';});function pwaInstall(){if(_p){_p.prompt();_p=null;}}window.addEventListener('appinstalled',function(){document.getElementById('pwaBar').style.display='none';});</script>
+</body>
+</html>

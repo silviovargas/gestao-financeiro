@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0F6E56">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="GF Ballet">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestão Financeira SL</title>
+<link rel="stylesheet" href="/css/global.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-content">
+    <div class="page-header">
+      <h1>🏠 Painel Geral</h1>
+      <div id="greeting" style="font-size:13px;color:var(--muted)"></div>
+    </div>
+    <div class="page-body">
+
+      <div class="kpi-grid" id="kpiGrid">
+        <div class="kpi-card"><div class="kpi-label">Checklist hoje</div><div class="kpi-val kpi-neutral" id="kpiCheck">—</div><div class="kpi-sub">tarefas concluídas</div></div>
+        <div class="kpi-card"><div class="kpi-label">Saldo consolidado</div><div class="kpi-val kpi-neutral" id="kpiBal">—</div><div class="kpi-sub">todas as contas</div></div>
+        <div class="kpi-card"><div class="kpi-label">Receitas do mês</div><div class="kpi-val kpi-positive" id="kpiInc">—</div><div class="kpi-sub" id="kpiMonth"></div></div>
+        <div class="kpi-card"><div class="kpi-label">Despesas do mês</div><div class="kpi-val kpi-negative" id="kpiExp">—</div><div class="kpi-sub">mês atual</div></div>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:1rem">
+        <div class="card">
+          <div class="card-header"><span class="card-title">✅ Checklist — progresso hoje</span><a href="/app" style="font-size:12px;color:var(--teal)">Ver tudo →</a></div>
+          <div class="card-body" id="checkSummary"><div style="color:var(--muted);font-size:13px">Carregando...</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">💰 Últimos lançamentos</span><a href="/finance" style="font-size:12px;color:var(--teal)">Ver tudo →</a></div>
+          <div class="card-body" id="recentTx"><div style="color:var(--muted);font-size:13px">Carregando...</div></div>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <a href="/app" style="text-decoration:none">
+          <div class="card" style="padding:1.25rem;display:flex;align-items:center;gap:12px;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''">
+            <div style="font-size:32px">✅</div>
+            <div><div style="font-weight:600;margin-bottom:3px">Checklist Financeiro</div><div style="font-size:12px;color:var(--muted)">Rotinas diária, semanal, mensal e trimestral</div></div>
+          </div>
+        </a>
+        <a href="/finance" style="text-decoration:none">
+          <div class="card" style="padding:1.25rem;display:flex;align-items:center;gap:12px;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''">
+            <div style="font-size:32px">💰</div>
+            <div><div style="font-weight:600;margin-bottom:3px">Finanças Domésticas</div><div style="font-size:12px;color:var(--muted)">Contas, lançamentos, orçamento e relatórios</div></div>
+          </div>
+        </a>
+        <a href="/invest" style="text-decoration:none">
+          <div class="card" style="padding:1.25rem;display:flex;align-items:center;gap:12px;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''">
+            <div style="font-size:32px">📈</div>
+            <div><div style="font-weight:600;margin-bottom:3px">Investimentos</div><div style="font-size:12px;color:var(--muted)">Carteira, metas, simulações e cotações</div></div>
+          </div>
+        </a>
+      </div>
+
+    </div>
+  </div>
+</div>
+<script src="/js/shared.js"></script>
+<script>
+if (!Auth.requireLogin()) throw '';
+buildSidebar('home');
+
+const u = Auth.user();
+const now = new Date();
+const hr = now.getHours();
+const greet = hr < 12 ? 'Bom dia' : hr < 18 ? 'Boa tarde' : 'Boa noite';
+document.getElementById('greeting').textContent = `${greet}, ${u.name.split(' ')[0]}! ${now.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'})}`;
+document.getElementById('kpiMonth').textContent = Fmt.month(currentMonth());
+
+async function loadHome() {
+  // Checklist
+  try {
+    const ts = await API.get('/tasks/state');
+    const done = Object.values(ts.state).filter(v=>v.done).length;
+    document.getElementById('kpiCheck').textContent = done + '/7';
+    const blocks = [
+      {id:'d1',label:'Manhã',total:3},{id:'d2',label:'Fim do dia',total:4}
+    ];
+    document.getElementById('checkSummary').innerHTML = blocks.map(b => {
+      const bdone = Object.keys(ts.state).filter(k => k.startsWith(b.id) && ts.state[k].done).length;
+      const pct = Math.round(bdone/b.total*100);
+      return `<div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+          <span>${b.label}</span><span style="color:var(--muted)">${bdone}/${b.total}</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:var(--teal)"></div></div>
+      </div>`;
+    }).join('');
+  } catch {}
+
+  // Finanças — resiliente (mostra último saldo na hora; revalida com timeout + retry)
+  (async () => {
+    const CK = 'gf_last_summary';
+    const setVals = (b, i, x) => {
+      document.getElementById('kpiBal').textContent = Fmt.brl(b);
+      document.getElementById('kpiInc').textContent = Fmt.brl(i);
+      document.getElementById('kpiExp').textContent = Fmt.brl(x);
+    };
+    let hasCache = false;
+    try {
+      const c = JSON.parse(localStorage.getItem(CK) || 'null');
+      if (c) { setVals(c.balance, c.income, c.expense); hasCache = true; }
+    } catch {}
+    const url = '/finance/summary?month=' + currentMonth() + '&family=true';
+    for (let a = 0; a < 3; a++) {
+      try {
+        const sum = await API.getT(url, 6000);
+        if (!sum) return;
+        setVals(sum.balance, sum.income, sum.expense);
+        localStorage.setItem(CK, JSON.stringify({ balance: sum.balance, income: sum.income, expense: sum.expense }));
+        return;
+      } catch (e) {
+        if (a < 2) { await new Promise(r => setTimeout(r, 800 * (a + 1))); continue; }
+        if (!hasCache) ['kpiBal','kpiInc','kpiExp'].forEach(id => document.getElementById(id).textContent = '—');
+      }
+    }
+  })();
+
+  // Últimos lançamentos
+  try {
+    const txs = await API.get('/finance/transactions?month=' + currentMonth() + '&family=true');
+    const last5 = txs.slice(0,5);
+    document.getElementById('recentTx').innerHTML = last5.length ? last5.map(t => `
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:16px">${t.cat_icon||'📦'}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.description||t.cat_name||'—'}</div>
+          <div style="font-size:10px;color:var(--muted)">${Fmt.date(t.date)} · ${t.owner_name}</div>
+        </div>
+        <span class="${t.type==='income'?'val-positive':'val-negative'}">${t.type==='income'?'+':'-'}${Fmt.brl(t.amount)}</span>
+      </div>
+    `).join('') : '<div style="color:var(--muted);font-size:13px">Nenhum lançamento este mês.</div>';
+  } catch {
+    document.getElementById('recentTx').innerHTML = '<div style="color:var(--muted);font-size:13px">Módulo de finanças não disponível.</div>';
+  }
+}
+
+loadHome();
+</script>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(e=>console.warn(e));}</script>
+</body>
+</html>

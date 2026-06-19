@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lista de Compras</title>
+  <style>
+    :root { --surface: #1b2430; --border: #2a3441; --text: #e8eef5; --muted: #9ca3af; --primary: #3b82f6; --success: #10b981; --danger: #ef4444; --radius: 8px; }
+    body { background: var(--surface); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding: 0; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .header { margin-bottom: 30px; border-bottom: 1px solid var(--border); padding-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { margin: 0; }
+    .btns { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .btn { padding: 10px 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--primary); color: white; cursor: pointer; font-size: 14px; text-decoration: none; display: inline-block; }
+    .btn-success { background: var(--success); }
+    .btn-danger { background: var(--danger); }
+    .btn-secondary { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
+    .btn:hover { opacity: 0.9; }
+    .card { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+    .tab { padding: 12px 20px; cursor: pointer; border: none; background: transparent; color: var(--muted); }
+    .tab.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { background: rgba(255,255,255,0.05); color: var(--primary); }
+    input, select { background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); padding: 10px; width: 100%; box-sizing: border-box; margin-bottom: 10px; }
+    .search-results { max-height: 300px; overflow-y: auto; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; margin-bottom: 20px; }
+    .product-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border); }
+    .total-section { background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-top: 20px; }
+    .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+    .modal.show { display: flex; }
+    .modal-content { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 30px; max-width: 500px; width: 90%; }
+    .no-data { text-align: center; color: var(--muted); padding: 40px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🛒 Lista de Compras</h1>
+      <a href="/" class="btn btn-secondary">← Voltar</a>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('listas')">Minhas Listas</button>
+      <button class="tab" onclick="showTab('mercados')">Mercados</button>
+      <button class="tab" onclick="showTab('historico')">Histórico</button>
+    </div>
+    <div id="tab-listas" class="tab-content active">
+      <div class="btns">
+        <button class="btn btn-success" onclick="showNovaListaModal()">+ Nova Lista</button>
+        <button class="btn btn-success" onclick="showNovoProdutoModal()">+ Novo Produto</button>
+      </div>
+      <div id="listaAtiva"></div>
+      <div id="listasCont"></div>
+    </div>
+    <div id="tab-mercados" class="tab-content">
+      <div class="btns">
+        <button class="btn btn-success" onclick="showNovoMercadoModal()">+ Novo Mercado</button>
+      </div>
+      <div id="mercadosCont"></div>
+    </div>
+    <div id="tab-historico" class="tab-content">
+      <div id="historicoCont"></div>
+    </div>
+  </div>
+
+  <div id="novaListaModal" class="modal">
+    <div class="modal-content">
+      <h2>Nova Lista</h2>
+      <select id="selecionarMercado"><option>-- Escolha um mercado --</option></select>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-success" onclick="criarNovaLista()">Criar</button>
+        <button class="btn btn-secondary" onclick="closeModal('novaListaModal')">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="novoMercadoModal" class="modal">
+    <div class="modal-content">
+      <h2>Novo Mercado</h2>
+      <input type="text" id="nomeMercado" placeholder="Nome">
+      <input type="text" id="cidadeMercado" placeholder="Cidade">
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-success" onclick="criarMercado()">Criar</button>
+        <button class="btn btn-secondary" onclick="closeModal('novoMercadoModal')">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="novoProdutoModal" class="modal">
+    <div class="modal-content">
+      <h2>Novo Produto</h2>
+      <input type="text" id="nomeProduto" placeholder="Nome do produto">
+      <select id="unidadeProduto">
+        <option value="un">Unidade</option>
+        <option value="kg">Kg</option>
+        <option value="L">Litro</option>
+        <option value="pacote">Pacote</option>
+        <option value="dúzia">Dúzia</option>
+      </select>
+      <input type="text" id="categoriaProduto" placeholder="Categoria">
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-success" onclick="criarProduto()">Criar</button>
+        <button class="btn btn-secondary" onclick="closeModal('novoProdutoModal')">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="pagamentoModal" class="modal">
+    <div class="modal-content">
+      <h2>Confirmar Pagamento</h2>
+      <div id="resumoPagamento"></div>
+      <label>Valor final da compra (R$)</label>
+      <input type="number" id="valorFinalInput" placeholder="0.00" step="0.01" onchange="atualizarTotalFinal()">
+      <label>Conta de Débito</label>
+      <select id="contaPagamento"><option>-- Conta --</option></select>
+      <label>Categoria</label>
+      <select id="categoriaPagamento"><option>-- Categoria --</option></select>
+      <div id="totalFinal" style="margin:20px 0;font-weight:600;color:var(--success);font-size:18px"></div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-success" onclick="confirmarPagamento()">Pagar</button>
+        <button class="btn btn-secondary" onclick="closeModal('pagamentoModal')">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/shared.js"></script>
+  <script>
+    let listAAtual = null, todosProdutos = [];
+
+    async function showTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('tab-'+tab).classList.add('active');
+      if(tab==='listas') carregarListas();
+      else if(tab==='mercados') carregarMercados();
+      else if(tab==='historico') carregarHistorico();
+    }
+
+    async function carregarListas() {
+      try {
+        const r = await API.get('/shop/lists');
+        const aberta = r.find(l => l.status==='open');
+        if(aberta) {
+          listAAtual = aberta.id;
+          const rItens = await API.get('/shop/lists/'+aberta.id);
+          todosProdutos = await API.get('/shop/products');
+          renderListaAtiva(rItens);
+        } else {
+          document.getElementById('listaAtiva').innerHTML = '<div class="no-data">Crie uma nova lista</div>';
+        }
+        const pagas = r.filter(l => l.status==='paid');
+        document.getElementById('listasCont').innerHTML = pagas.length ? '<h3>Histórico</h3>'+pagas.map(l=>`<div class="card"><div style="margin-bottom:10px"><strong>${l.market_name}</strong> — ${l.date}<br>R$ ${l.total.toFixed(2)}</div><button class="btn btn-danger" style="width:100%;padding:10px" onclick="excluirListaPaga(${l.id})">Excluir</button></div>`) : '';
+      } catch(e) { console.error(e); }
+    }
+
+    async function renderListaAtiva(data) {
+      const {list,items} = data;
+      let html = '<div class="card"><h3>'+list.market_name+'</h3>';
+      html += '<input type="text" id="buscaAdicionar" placeholder="Buscar e adicionar..." onkeyup="buscarProdutos()">';
+      html += '<div id="resultadosBusca"></div>';
+      html += '<table><thead><tr><th>Produto</th><th>Qtd</th><th>Preço</th><th>Subtotal</th><th></th></tr></thead><tbody>';
+      let subtotal = 0;
+      items.forEach(it => {
+        const sub = (it.price||0)*(it.qty||1);
+        subtotal += sub;
+        html += `<tr><td>${it.name}</td><td><input type="number" value="${it.qty||1}" style="width:60px" onchange="atualizarItem(${it.id},this.value,null,null)"></td>
+          <td><input type="number" value="${it.price||''}" placeholder="0.00" style="width:80px" step="0.01" onchange="atualizarItem(${it.id},null,this.value,null)"></td>
+          <td>R$ ${sub.toFixed(2)}</td>
+          <td><button class="btn" onclick="toggleCart(${it.id},${it.in_cart?0:1})" style="padding:5px 10px;font-size:12px">Carrinho ${it.in_cart?'✓':''}</button></td></tr>`;
+      });
+      html += '</tbody></table>';
+      const carrinho = items.filter(i => i.in_cart);
+      const totalCarrinho = carrinho.reduce((s,it)=>s+(it.price||0)*(it.qty||1), 0);
+      html += `<div class="total-section">
+        <div style="display:flex;justify-content:space-between;margin-bottom:10px"><span>Subtotal:</span> <span>R$ ${subtotal.toFixed(2)}</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:10px"><span>No carrinho (${carrinho.length}):</span> <span>R$ ${totalCarrinho.toFixed(2)}</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:20px;font-weight:600;font-size:18px;color:var(--success)"><span>TOTAL CALCULADO:</span> <span>R$ ${totalCarrinho.toFixed(2)}</span></div>
+        <button class="btn btn-success" style="width:100%" onclick="showPagamentoModal(${list.id},${totalCarrinho})">💳 Pagar Agora</button>
+      </div></div>`;
+      document.getElementById('listaAtiva').innerHTML = html;
+    }
+
+    async function buscarProdutos() {
+      const q = document.getElementById('buscaAdicionar').value.toLowerCase();
+      if(!q) { document.getElementById('resultadosBusca').innerHTML = ''; return; }
+      const filtrados = todosProdutos.filter(p => p.name.toLowerCase().includes(q) || (p.category||'').toLowerCase().includes(q));
+      const html = filtrados.length ? '<div class="search-results">'+filtrados.map(p=>`
+        <div class="product-item">
+          <div><strong>${p.name}</strong><br><span style="font-size:12px;color:var(--muted)">${p.category} • ${p.unit}</span></div>
+          <button class="btn btn-success" style="padding:5px 10px;font-size:12px" onclick="adicionarProduto(${p.id},'${p.name}')">+ Add</button>
+        </div>
+      `).join('')+'</div>' : '';
+      document.getElementById('resultadosBusca').innerHTML = html;
+    }
+
+    async function adicionarProduto(pid, nome) {
+      if(!listAAtual) return;
+      try {
+        await API.post('/shop/lists/'+listAAtual+'/items', {product_id: pid, qty: 1});
+        document.getElementById('buscaAdicionar').value = '';
+        carregarListas();
+      } catch(e) { console.error(e); }
+    }
+
+    async function atualizarItem(itemId, qty, price) {
+      const body = {};
+      if(qty) body.qty = parseFloat(qty);
+      if(price) body.price = parseFloat(price);
+      try {
+        await API.put('/shop/list-items/'+itemId, body);
+        carregarListas();
+      } catch(e) { console.error(e); }
+    }
+
+    async function toggleCart(itemId, estado) {
+      try {
+        await API.put('/shop/list-items/'+itemId, {in_cart: estado});
+        carregarListas();
+      } catch(e) { console.error(e); }
+    }
+
+    async function carregarMercados() {
+      try {
+        const r = await API.get('/shop/markets');
+        document.getElementById('mercadosCont').innerHTML = r.length ? r.map(m=>`<div class="card"><strong>${m.name}</strong> ${m.city?'— '+m.city:''} <button class="btn btn-danger" style="float:right;padding:5px 10px" onclick="excluirMercado(${m.id})">X</button></div>`).join('') : '<div class="no-data">Nenhum mercado</div>';
+      } catch(e) { console.error(e); }
+    }
+
+    async function carregarHistorico() {
+      try {
+        const r = await API.get('/shop/lists?status=paid');
+        document.getElementById('historicoCont').innerHTML = r.length ? r.map(l=>`<div class="card"><strong>${l.market_name}</strong> — ${l.date}<br>R$ ${l.total.toFixed(2)}</div>`).join('') : '<div class="no-data">Sem compras</div>';
+      } catch(e) { console.error(e); }
+    }
+
+    async function showPagamentoModal(listId, total) {
+      try {
+        const contas = await API.get('/finance/accounts');
+        const cats = await API.get('/finance/categories');
+        document.getElementById('contaPagamento').innerHTML = '<option>-- Conta --</option>'+contas.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+        document.getElementById('categoriaPagamento').innerHTML = '<option>-- Categoria --</option>'+cats.filter(c=>c.type==='expense').map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+        document.getElementById('resumoPagamento').innerHTML = 'Subtotal calculado: R$ '+total.toFixed(2);
+        document.getElementById('valorFinalInput').value = total.toFixed(2);
+        document.getElementById('totalFinal').textContent = 'Valor final: R$ '+total.toFixed(2);
+        window.listIdPagamento = listId;
+        window.totalCalculado = total;
+        openModal('pagamentoModal');
+      } catch(e) { console.error(e); }
+    }
+
+    function atualizarTotalFinal() {
+      const valorFinal = parseFloat(document.getElementById('valorFinalInput').value)||0;
+      document.getElementById('totalFinal').textContent = 'Valor final: R$ '+valorFinal.toFixed(2);
+      window.totalFinal = valorFinal;
+    }
+
+    async function confirmarPagamento() {
+      try {
+        const acc = document.getElementById('contaPagamento').value;
+        const cat = document.getElementById('categoriaPagamento').value;
+        const valorFinal = parseFloat(document.getElementById('valorFinalInput').value)||0;
+        if(!acc||!cat) return;
+        const r = await API.post('/shop/lists/'+window.listIdPagamento+'/pay', {account_id: parseInt(acc), category_id: parseInt(cat), discount: (window.totalCalculado - valorFinal)});
+        closeModal('pagamentoModal');
+        listAAtual = null;
+        carregarListas();
+      } catch(e) { console.error(e); }
+    }
+
+    async function criarNovaLista() {
+      try {
+        const m = document.getElementById('selecionarMercado').value;
+        if(!m) return;
+        const r = await API.post('/shop/lists', {market_id: parseInt(m)});
+        listAAtual = r.id;
+        closeModal('novaListaModal');
+        carregarListas();
+      } catch(e) { console.error(e); }
+    }
+
+    async function criarMercado() {
+      try {
+        const nome = document.getElementById('nomeMercado').value;
+        if(!nome) return;
+        await API.post('/shop/markets', {name: nome, city: document.getElementById('cidadeMercado').value});
+        document.getElementById('nomeMercado').value = '';
+        document.getElementById('cidadeMercado').value = '';
+        closeModal('novoMercadoModal');
+        const r = await API.get('/shop/markets');
+        document.getElementById('selecionarMercado').innerHTML = '<option>-- Escolha um mercado --</option>'+r.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
+        carregarMercados();
+      } catch(e) { console.error(e); }
+    }
+
+    async function criarProduto() {
+      try {
+        const nome = document.getElementById('nomeProduto').value;
+        const unidade = document.getElementById('unidadeProduto').value;
+        const categoria = document.getElementById('categoriaProduto').value;
+        if(!nome) return;
+        await API.post('/shop/products', {name: nome, unit: unidade, category: categoria});
+        document.getElementById('nomeProduto').value = '';
+        document.getElementById('categoriaProduto').value = '';
+        closeModal('novoProdutoModal');
+        todosProdutos = await API.get('/shop/products');
+        carregarListas();
+      } catch(e) { console.error(e); }
+    }
+
+    async function excluirListaPaga(id, txId) {
+      if(!confirm('Excluir lista E o lançamento financeiro?')) return;
+      try {
+        if(txId) await API.delete('/finance/transactions/'+txId);
+        await API.delete('/shop/lists/'+id);
+        carregarListas();
+      } catch(e) { console.error(e); }
+    }
+
+    async function excluirMercado(id) {
+      if(!confirm('Excluir mercado?')) return;
+      try {
+        await API.put('/shop/markets/'+id, {active: 0});
+        carregarMercados();
+      } catch(e) { console.error(e); }
+    }
+
+    function showNovaListaModal() {
+      API.get('/shop/markets').then(r => {
+        document.getElementById('selecionarMercado').innerHTML = '<option>-- Escolha --</option>'+r.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
+        openModal('novaListaModal');
+      });
+    }
+
+    function showNovoMercadoModal() { openModal('novoMercadoModal'); }
+    function showNovoProdutoModal() { openModal('novoProdutoModal'); }
+    function openModal(id) { document.getElementById(id).classList.add('show'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+    Auth.requireLogin();
+    carregarListas();
+  </script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+services:
+  gf-ballet:
+    build: .
+    container_name: gf-ballet
+    restart: always
+    environment:
+      - VIRTUAL_HOST=gestao.studioballone.com.br
+      - VIRTUAL_PORT=3000
+      - LETSENCRYPT_HOST=gestao.studioballone.com.br
+      - LETSENCRYPT_EMAIL=admin@studioballone.com.br
+      - DB_PATH=/app/data/database.db
+      - NODE_ENV=production
+    volumes:
+      - gf_data:/app/data
+    networks:
+      - proxy_network
+
+volumes:
+  gf_data:
+    driver: local
+
+networks:
+  proxy_network:
+    external: true
+    name: ticketz-docker-acme_nginx-proxy

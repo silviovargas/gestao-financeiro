@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lista de Compras</title>
+<style>
+:root{--surface:#1b2430;--border:#2a3441;--text:#e8eef5;--muted:#9ca3af;--primary:#3b82f6;--success:#10b981;--danger:#ef4444}
+body{background:var(--surface);color:var(--text);font-family:-apple-system,sans-serif;margin:0}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+.top{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:14px}
+h1{font-size:22px;margin:0}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:16px}
+.tab{flex:1;padding:12px 4px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px}
+.tab.on{color:var(--text);border-bottom:2px solid var(--primary)}
+.btn{padding:10px 16px;border:none;border-radius:8px;cursor:pointer;font-size:14px;color:#fff;background:var(--primary)}
+.btn-ok{background:var(--success)}
+.btn-no{background:var(--danger)}
+.btn-line{background:transparent;color:var(--primary);border:1px solid var(--primary)}
+.btn-block{display:block;width:100%;margin-top:10px}
+.card{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:14px;margin:10px 0}
+input,select{width:100%;box-sizing:border-box;padding:10px;margin:6px 0;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px}
+table{width:100%;border-collapse:collapse;margin:12px 0}
+th,td{padding:8px 6px;border-bottom:1px solid var(--border);text-align:left;font-size:14px}
+.row{display:flex;justify-content:space-between;margin:4px 0}
+.tot{font-size:18px;font-weight:600;color:var(--success)}
+.muted{color:var(--muted);font-size:12px}
+.empty{text-align:center;color:var(--muted);padding:40px 10px}
+.res{max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:10px}
+.res-item{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--border)}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;align-items:center;justify-content:center}
+.modal.on{display:flex}
+.box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;width:92%;max-width:460px;max-height:90vh;overflow-y:auto}
+.qtd{width:62px!important}
+.preco{width:84px!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>🛒 Lista de Compras</h1>
+    <a href="/" class="btn btn-line" style="text-decoration:none">← Voltar</a>
+  </div>
+
+  <div class="tabs">
+    <button class="tab on" id="t-listas"   onclick="aba('listas')">Minhas Listas</button>
+    <button class="tab"    id="t-mercados" onclick="aba('mercados')">Mercados</button>
+    <button class="tab"    id="t-historico" onclick="aba('historico')">Histórico</button>
+  </div>
+
+  <div id="p-listas">
+    <button class="btn btn-ok" onclick="abrirModal('m-lista')">+ Nova Lista</button>
+    <button class="btn btn-ok" onclick="abrirModal('m-produto')">+ Novo Produto</button>
+    <div id="c-listas"></div>
+  </div>
+
+  <div id="p-mercados" style="display:none">
+    <button class="btn btn-ok" onclick="abrirModal('m-mercado')">+ Novo Mercado</button>
+    <div id="c-mercados"></div>
+  </div>
+
+  <div id="p-historico" style="display:none">
+    <div id="c-historico"></div>
+  </div>
+</div>
+
+<!-- modal nova lista -->
+<div class="modal" id="m-lista"><div class="box">
+  <h2>Nova Lista</h2>
+  <select id="f-mercado"></select>
+  <button class="btn btn-ok btn-block" onclick="criarLista()">Criar</button>
+  <button class="btn btn-line btn-block" onclick="fecharModal('m-lista')">Cancelar</button>
+</div></div>
+
+<!-- modal novo mercado -->
+<div class="modal" id="m-mercado"><div class="box">
+  <h2>Novo Mercado</h2>
+  <input id="f-mnome" placeholder="Nome">
+  <input id="f-mcidade" placeholder="Cidade (opcional)">
+  <button class="btn btn-ok btn-block" onclick="criarMercado()">Criar</button>
+  <button class="btn btn-line btn-block" onclick="fecharModal('m-mercado')">Cancelar</button>
+</div></div>
+
+<!-- modal novo produto -->
+<div class="modal" id="m-produto"><div class="box">
+  <h2>Novo Produto</h2>
+  <input id="f-pnome" placeholder="Nome do produto">
+  <select id="f-punidade">
+    <option value="un">Unidade</option><option value="kg">Kg</option>
+    <option value="L">Litro</option><option value="pacote">Pacote</option>
+    <option value="dúzia">Dúzia</option>
+  </select>
+  <input id="f-pcategoria" placeholder="Categoria (ex: Mercearia)">
+  <button class="btn btn-ok btn-block" onclick="criarProduto()">Criar</button>
+  <button class="btn btn-line btn-block" onclick="fecharModal('m-produto')">Cancelar</button>
+</div></div>
+
+<!-- modal pagamento -->
+<div class="modal" id="m-pagar"><div class="box">
+  <h2>Confirmar Pagamento</h2>
+  <div class="muted" id="f-subtotal"></div>
+  <label class="muted">Valor final da compra (R$)</label>
+  <input type="number" step="0.01" id="f-valorfinal" oninput="recalcular()">
+  <label class="muted">Conta de débito</label>
+  <select id="f-conta"></select>
+  <label class="muted">Categoria</label>
+  <select id="f-categoria"></select>
+  <div class="tot" id="f-total" style="margin:14px 0"></div>
+  <button class="btn btn-ok btn-block" onclick="confirmarPagamento()">Pagar</button>
+  <button class="btn btn-line btn-block" onclick="fecharModal('m-pagar')">Cancelar</button>
+</div></div>
+
+<script src="/js/shared.js"></script>
+<script>
+var listaAberta = null;
+var produtos = [];
+var pagto = { listId: null, subtotal: 0 };
+
+function aba(nome) {
+  ['listas','mercados','historico'].forEach(function(n){
+    document.getElementById('p-'+n).style.display = (n===nome) ? 'block' : 'none';
+    document.getElementById('t-'+n).className = (n===nome) ? 'tab on' : 'tab';
+  });
+  if (nome==='listas') carregarListas();
+  if (nome==='mercados') carregarMercados();
+  if (nome==='historico') carregarHistorico();
+}
+
+function abrirModal(id) {
+  if (id==='m-lista') {
+    API.get('/shop/markets').then(function(ms){
+      document.getElementById('f-mercado').innerHTML =
+        '<option value="">-- Escolha um mercado --</option>' +
+        ms.map(function(m){ return '<option value="'+m.id+'">'+m.name+'</option>'; }).join('');
+    });
+  }
+  document.getElementById(id).classList.add('on');
+}
+function fecharModal(id) { document.getElementById(id).classList.remove('on'); }
+
+/* ── LISTAS ── */
+async function carregarListas() {
+  try {
+    var todas = await API.get('/shop/lists');
+    var aberta = todas.find(function(l){ return l.status==='open'; });
+    if (!aberta) {
+      listaAberta = null;
+      document.getElementById('c-listas').innerHTML = '<div class="empty">Nenhuma lista aberta. Crie uma nova!</div>';
+      return;
+    }
+    listaAberta = aberta.id;
+    var det = await API.get('/shop/lists/'+aberta.id);
+    produtos = await API.get('/shop/products');
+    renderLista(det.list || aberta, det.items || []);
+  } catch(e) { alert('Erro ao carregar listas: '+e.message); }
+}
+
+function renderLista(lista, items) {
+  var nome = lista.market_name || 'Lista';
+  var html = '<div class="card"><h3>'+nome+'</h3>';
+  html += '<input id="f-busca" placeholder="Buscar produto para adicionar..." oninput="buscar()">';
+  html += '<div id="c-busca"></div>';
+  html += '<table><tr><th>Produto</th><th>Qtd</th><th>Preço</th><th>Subt.</th><th></th></tr>';
+  var subtotal = 0;
+  items.forEach(function(it){
+    var sub = (it.price||0)*(it.qty||1);
+    subtotal += sub;
+    html += '<tr>'
+      + '<td>'+it.name+'</td>'
+      + '<td><input class="qtd" type="number" value="'+(it.qty||1)+'" onchange="mudarItem('+it.id+',this.value,null)"></td>'
+      + '<td><input class="preco" type="number" step="0.01" placeholder="0.00" value="'+(it.price||'')+'" onchange="mudarItem('+it.id+',null,this.value)"></td>'
+      + '<td>R$ '+sub.toFixed(2)+'</td>'
+      + '<td><button class="btn" style="padding:5px 8px;font-size:12px" onclick="carrinho('+it.id+','+(it.in_cart?0:1)+')">'+(it.in_cart?'✓':'+')+' 🛒</button></td>'
+      + '</tr>';
+  });
+  html += '</table>';
+  var noCarrinho = items.filter(function(i){ return i.in_cart; });
+  var totalC = noCarrinho.reduce(function(s,it){ return s+(it.price||0)*(it.qty||1); },0);
+  html += '<div class="card">'
+    + '<div class="row"><span>Subtotal lista:</span><span>R$ '+subtotal.toFixed(2)+'</span></div>'
+    + '<div class="row"><span>No carrinho ('+noCarrinho.length+'):</span><span>R$ '+totalC.toFixed(2)+'</span></div>'
+    + '<div class="row tot"><span>TOTAL:</span><span>R$ '+totalC.toFixed(2)+'</span></div>'
+    + '<button class="btn btn-ok btn-block" onclick="abrirPagamento('+lista.id+','+totalC+')">💳 Pagar Agora</button>'
+    + '<button class="btn btn-no btn-block" onclick="excluirLista('+lista.id+', false)">Excluir Lista</button>'
+    + '</div></div>';
+  document.getElementById('c-listas').innerHTML = html;
+}
+
+function buscar() {
+  var q = document.getElementById('f-busca').value.toLowerCase();
+  var alvo = document.getElementById('c-busca');
+  if (!q) { alvo.innerHTML=''; return; }
+  var achados = produtos.filter(function(p){
+    return p.name.toLowerCase().indexOf(q)>=0 || (p.category||'').toLowerCase().indexOf(q)>=0;
+  }).slice(0,30);
+  if (!achados.length) { alvo.innerHTML = '<div class="muted" style="padding:8px">Nenhum produto encontrado</div>'; return; }
+  alvo.innerHTML = '<div class="res">'+achados.map(function(p){
+    return '<div class="res-item"><div><strong>'+p.name+'</strong><br><span class="muted">'+(p.category||'')+' • '+(p.unit||'un')+'</span></div>'
+      + '<button class="btn btn-ok" style="padding:5px 10px;font-size:12px" onclick="addItem('+p.id+')">+ Add</button></div>';
+  }).join('')+'</div>';
+}
+
+async function addItem(pid) {
+  if (!listaAberta) return;
+  try {
+    await API.post('/shop/lists/'+listaAberta+'/items', {product_id: pid, qty: 1});
+    carregarListas();
+  } catch(e) { alert('Erro ao adicionar: '+e.message); }
+}
+
+async function mudarItem(id, qty, price) {
+  var body = {};
+  if (qty   !== null && qty   !== '') body.qty   = parseFloat(qty);
+  if (price !== null && price !== '') body.price = parseFloat(price);
+  try { await API.put('/shop/list-items/'+id, body); carregarListas(); }
+  catch(e) { alert('Erro ao atualizar item: '+e.message); }
+}
+
+async function carrinho(id, estado) {
+  try { await API.put('/shop/list-items/'+id, {in_cart: estado}); carregarListas(); }
+  catch(e) { alert('Erro no carrinho: '+e.message); }
+}
+
+async function criarLista() {
+  var m = document.getElementById('f-mercado').value;
+  if (!m) { alert('Escolha um mercado.'); return; }
+  try {
+    var r = await API.post('/shop/lists', {market_id: parseInt(m)});
+    listaAberta = r.id;
+    fecharModal('m-lista');
+    carregarListas();
+  } catch(e) { alert('Erro ao criar lista: '+e.message); }
+}
+
+/* ── PAGAMENTO ── */
+async function abrirPagamento(listId, subtotal) {
+  try {
+    var contas = await API.get('/finance/accounts');
+    var cats = await API.get('/finance/categories');
+    document.getElementById('f-conta').innerHTML = '<option value="">-- Conta --</option>'
+      + contas.map(function(c){ return '<option value="'+c.id+'">'+c.name+'</option>'; }).join('');
+    document.getElementById('f-categoria').innerHTML = '<option value="">-- Categoria --</option>'
+      + cats.filter(function(c){ return c.type==='expense'; })
+            .map(function(c){ return '<option value="'+c.id+'">'+c.name+'</option>'; }).join('');
+    document.getElementById('f-subtotal').textContent = 'Subtotal calculado: R$ '+subtotal.toFixed(2);
+    document.getElementById('f-valorfinal').value = subtotal.toFixed(2);
+    document.getElementById('f-total').textContent = 'Valor final: R$ '+subtotal.toFixed(2);
+    pagto.listId = listId;
+    pagto.subtotal = subtotal;
+    abrirModal('m-pagar');
+  } catch(e) { alert('Erro ao abrir pagamento: '+e.message); }
+}
+
+function recalcular() {
+  var v = parseFloat(document.getElementById('f-valorfinal').value)||0;
+  document.getElementById('f-total').textContent = 'Valor final: R$ '+v.toFixed(2);
+}
+
+async function confirmarPagamento() {
+  var acc = document.getElementById('f-conta').value;
+  var cat = document.getElementById('f-categoria').value;
+  var vf  = parseFloat(document.getElementById('f-valorfinal').value)||0;
+  if (!acc || !cat) { alert('Escolha a conta e a categoria.'); return; }
+  try {
+    await API.post('/shop/lists/'+pagto.listId+'/pay', {
+      account_id: parseInt(acc),
+      category_id: parseInt(cat),
+      discount: Math.max(0, pagto.subtotal - vf)
+    });
+    fecharModal('m-pagar');
+    listaAberta = null;
+    carregarListas();
+  } catch(e) { alert('Erro ao pagar: '+e.message); }
+}
+
+/* ── MERCADOS ── */
+async function carregarMercados() {
+  try {
+    var ms = await API.get('/shop/markets');
+    if (!ms.length) { document.getElementById('c-mercados').innerHTML = '<div class="empty">Nenhum mercado</div>'; return; }
+    document.getElementById('c-mercados').innerHTML = ms.map(function(m){
+      return '<div class="card row" style="align-items:center"><div><strong>'+m.name+'</strong>'
+        + (m.city ? ' — '+m.city : '') + '</div>'
+        + '<button class="btn btn-no" onclick="excluirMercado('+m.id+')">X</button></div>';
+    }).join('');
+  } catch(e) { alert('Erro ao carregar mercados: '+e.message); }
+}
+
+async function excluirMercado(id) {
+  if (!confirm('Excluir este mercado?')) return;
+  try { await API.delete('/shop/markets/'+id); carregarMercados(); }
+  catch(e) { alert('Erro ao excluir mercado: '+e.message); }
+}
+
+async function criarMercado() {
+  var nome = document.getElementById('f-mnome').value.trim();
+  if (!nome) { alert('Nome obrigatório'); return; }
+  try {
+    await API.post('/shop/markets', {name: nome, city: document.getElementById('f-mcidade').value.trim()});
+    document.getElementById('f-mnome').value='';
+    document.getElementById('f-mcidade').value='';
+    fecharModal('m-mercado');
+    carregarMercados();
+  } catch(e) { alert('Erro ao criar mercado: '+e.message); }
+}
+
+/* ── HISTÓRICO ── */
+async function carregarHistorico() {
+  try {
+    var pagas = await API.get('/shop/lists?status=paid');
+    if (!pagas.length) { document.getElementById('c-historico').innerHTML = '<div class="empty">Sem compras lançadas</div>'; return; }
+    document.getElementById('c-historico').innerHTML = pagas.map(function(l){
+      return '<div class="card">'
+        + '<div><strong>'+(l.market_name||'Mercado')+'</strong> — '+l.date+'</div>'
+        + '<div class="tot" style="margin:6px 0">R$ '+(l.total||0).toFixed(2)+'</div>'
+        + '<button class="btn btn-no btn-block" onclick="excluirLista('+l.id+', true)">🗑 Excluir lista e lançamento</button>'
+        + '</div>';
+    }).join('');
+  } catch(e) { alert('Erro ao carregar histórico: '+e.message); }
+}
+
+/* Excluir lista (aberta ou paga). Se paga, apaga também a transação financeira. */
+async function excluirLista(id, doHistorico) {
+  var msg = doHistorico ? 'Excluir esta compra E o lançamento no Financeiro?' : 'Excluir esta lista?';
+  if (!confirm(msg)) return;
+  try {
+    var det = await API.get('/shop/lists/'+id);
+    var lista = det.list || det;                       // rota retorna {list, items}
+    var txId = lista.fin_transaction_id;
+    if (txId) {
+      try { await API.delete('/finance/transactions/'+txId); }
+      catch(e2) { alert('Aviso: não consegui excluir o lançamento financeiro ('+e2.message+'). A lista será excluída mesmo assim.'); }
+    }
+    await API.delete('/shop/lists/'+id);
+    if (doHistorico) carregarHistorico(); else carregarListas();
+  } catch(e) { alert('Erro ao excluir: '+e.message); }
+}
+
+/* ── PRODUTOS ── */
+async function criarProduto() {
+  var nome = document.getElementById('f-pnome').value.trim();
+  if (!nome) { alert('Nome obrigatório'); return; }
+  try {
+    await API.post('/shop/products', {
+      name: nome,
+      unit: document.getElementById('f-punidade').value,
+      category: document.getElementById('f-pcategoria').value.trim()
+    });
+    document.getElementById('f-pnome').value='';
+    document.getElementById('f-pcategoria').value='';
+    fecharModal('m-produto');
+    produtos = await API.get('/shop/products');
+  } catch(e) { alert('Erro ao criar produto: '+e.message); }
+}
+
+Auth.requireLogin();
+carregarListas();
+</script>
+</body>
+</html>

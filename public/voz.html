@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Lançamento por Voz</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0F1923">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --bg:#0F1923; --surface:#1A2535; --surface2:#243044;
+  --primary:#0F6E56; --primary-l:#0a5240;
+  --green:#2ECC71; --red:#E74C3C; --amber:#F39C12;
+  --text:#F0F4F8; --muted:#8899AA; --border:#2A3A50;
+  --radius:14px;
+}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* HEADER */
+.header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;padding-top:max(16px,env(safe-area-inset-top));}
+.back-btn{background:var(--surface);border:none;color:var(--muted);border-radius:10px;padding:8px 14px;font-size:13px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;}
+.back-btn:hover{color:var(--text);}
+.header-title{font-size:15px;font-weight:600;color:var(--muted);}
+.header-spacer{width:80px;}
+
+/* ESTADO: OUVINDO */
+#stateListening{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;}
+#stateListening.hidden{display:none;}
+
+.mic-wrap{position:relative;width:160px;height:160px;display:flex;align-items:center;justify-content:center;margin-bottom:32px;}
+.mic-ring{position:absolute;border-radius:50%;border:2px solid var(--primary);opacity:0;animation:none;}
+.mic-ring.r1{width:160px;height:160px;}
+.mic-ring.r2{width:130px;height:130px;}
+.mic-ring.r3{width:100px;height:100px;}
+.listening .mic-ring{animation:pulse 2s ease-out infinite;}
+.listening .mic-ring.r2{animation-delay:.3s;}
+.listening .mic-ring.r3{animation-delay:.6s;}
+@keyframes pulse{0%{opacity:.6;transform:scale(.9);}100%{opacity:0;transform:scale(1.15);}}
+
+.mic-btn{width:80px;height:80px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:32px;transition:all .2s;background:var(--surface2);position:relative;z-index:2;}
+.mic-btn.idle{background:var(--surface2);}
+.mic-btn.active{background:var(--primary);box-shadow:0 0 30px rgba(15,110,86,.5);}
+.mic-btn.processing{background:var(--amber);animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.mic-label{font-size:16px;font-weight:500;color:var(--muted);text-align:center;margin-bottom:12px;}
+.mic-sub{font-size:13px;color:var(--border);text-align:center;line-height:1.5;max-width:260px;}
+
+.transcript-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;min-height:80px;width:100%;max-width:400px;font-size:15px;line-height:1.6;color:var(--text);text-align:center;margin-top:20px;transition:all .3s;}
+.transcript-box.has-text{text-align:left;color:var(--text);}
+.transcript-placeholder{color:var(--muted);font-style:italic;}
+
+.hint-list{display:flex;flex-direction:column;gap:8px;margin-top:24px;width:100%;max-width:400px;}
+.hint{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--muted);cursor:pointer;transition:all .15s;text-align:left;}
+.hint:hover,.hint:active{background:var(--surface2);color:var(--text);border-color:var(--primary);}
+.hint strong{color:var(--text);font-size:13px;display:block;margin-bottom:2px;}
+
+/* ESTADO: CONFIRMAÇÃO */
+#stateConfirm{flex:1;display:flex;flex-direction:column;padding:0 16px 20px;overflow-y:auto;}
+#stateConfirm.hidden{display:none;}
+
+.confirm-header{text-align:center;padding:20px 0;}
+.confirm-icon{font-size:48px;margin-bottom:8px;}
+.confirm-title{font-size:18px;font-weight:700;}
+.confirm-sub{font-size:13px;color:var(--muted);margin-top:4px;}
+
+.confirm-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;}
+.confirm-field{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+.confirm-field:last-child{border-bottom:none;}
+.cf-icon{font-size:20px;width:30px;text-align:center;flex-shrink:0;}
+.cf-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;}
+.cf-val{font-size:15px;font-weight:600;}
+.cf-edit{margin-left:auto;background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:inherit;}
+
+.amount-big{font-size:36px;font-weight:800;text-align:center;padding:16px 0;}
+.amount-big.expense{color:var(--red);}
+.amount-big.income{color:var(--green);}
+
+.ai-note{background:var(--surface2);border-left:3px solid var(--amber);border-radius:0 8px 8px 0;padding:10px 14px;font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5;}
+.ai-note strong{color:var(--amber);}
+
+.btn-row{display:flex;gap:10px;margin-top:8px;padding-bottom:max(20px,env(safe-area-inset-bottom));}
+.btn-confirm{flex:2;background:var(--primary);color:#fff;border:none;border-radius:var(--radius);padding:16px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;}
+.btn-confirm:active{filter:brightness(.9);}
+.btn-retry{flex:1;background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:var(--radius);padding:16px;font-size:14px;cursor:pointer;font-family:inherit;}
+
+/* EDIT MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:flex-end;padding-bottom:env(safe-area-inset-bottom);}
+.overlay.hidden{display:none;}
+.edit-sheet{background:var(--surface);border-radius:20px 20px 0 0;padding:20px;width:100%;max-height:70vh;overflow-y:auto;}
+.edit-sheet h3{font-size:16px;font-weight:600;margin-bottom:16px;}
+.ef{margin-bottom:14px;}
+.ef label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:6px;}
+.ef input,.ef select{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:12px 14px;font-size:15px;font-family:inherit;outline:none;}
+.ef input:focus,.ef select:focus{border-color:var(--primary);}
+.sheet-btns{display:flex;gap:10px;margin-top:16px;}
+.sheet-ok{flex:1;background:var(--primary);color:#fff;border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;}
+.sheet-cancel{background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:10px;padding:14px 20px;font-size:15px;cursor:pointer;font-family:inherit;}
+
+/* SUCCESS */
+#stateSuccess{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;}
+#stateSuccess.hidden{display:none;}
+.success-icon{font-size:80px;margin-bottom:20px;animation:pop .4s cubic-bezier(.175,.885,.32,1.275);}
+@keyframes pop{0%{transform:scale(0);}100%{transform:scale(1);}}
+.success-title{font-size:22px;font-weight:700;margin-bottom:8px;}
+.success-sub{font-size:14px;color:var(--muted);text-align:center;line-height:1.5;}
+.success-actions{display:flex;flex-direction:column;gap:10px;margin-top:32px;width:100%;max-width:300px;}
+.btn-novo{background:var(--primary);color:#fff;border:none;border-radius:var(--radius);padding:16px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;}
+.btn-ver{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);padding:14px;font-size:14px;cursor:pointer;font-family:inherit;}
+
+/* LOADING */
+.loading-dots{display:inline-flex;gap:4px;}
+.loading-dots span{width:6px;height:6px;border-radius:50%;background:var(--primary);animation:dot .8s ease-in-out infinite;}
+.loading-dots span:nth-child(2){animation-delay:.15s;}
+.loading-dots span:nth-child(3){animation-delay:.3s;}
+@keyframes dot{0%,100%{opacity:.3;transform:scale(.8);}50%{opacity:1;transform:scale(1.2);}}
+
+.toast{position:fixed;top:max(20px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:#1a2535;border:1px solid var(--border);color:var(--text);padding:12px 20px;border-radius:12px;font-size:13px;z-index:200;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.4);transition:opacity .3s;}
+.toast.error{border-color:var(--red);color:var(--red);}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <button class="back-btn" onclick="window.location.href='/finance'">← Finanças</button>
+  <span class="header-title">🎙️ Lançamento por Voz</span>
+  <div class="header-spacer"></div>
+</div>
+
+<!-- ESTADO 1: OUVINDO -->
+<div id="stateListening">
+  <div class="mic-wrap" id="micWrap">
+    <div class="mic-ring r1"></div>
+    <div class="mic-ring r2"></div>
+    <div class="mic-ring r3"></div>
+    <button class="mic-btn idle" id="micBtn" onclick="toggleListen()">🎙️</button>
+  </div>
+
+  <div class="mic-label" id="micLabel">Toque para falar</div>
+  <div class="mic-sub" id="micSub">Diga o que gastou, quanto, onde e em qual conta</div>
+
+  <div class="transcript-box" id="transcriptBox">
+    <span class="transcript-placeholder">Ex: "Gastei R$ 85 de combustível hoje no Sicoob PJ"</span>
+  </div>
+
+  <div class="hint-list">
+    <div class="hint" onclick="useHint(this)">
+      <strong>💸 Despesa</strong>
+      "Gastei noventa reais no mercado hoje na conta Nubank"
+    </div>
+    <div class="hint" onclick="useHint(this)">
+      <strong>💰 Receita</strong>
+      "Recebi quinhentos reais de mensalidade na conta Sicoob PJ"
+    </div>
+    <div class="hint" onclick="useHint(this)">
+      <strong>⛽ Combustível</strong>
+      "Abasteci por cento e cinquenta reais na conta Silvio PF"
+    </div>
+  </div>
+</div>
+
+<!-- ESTADO 2: CONFIRMAÇÃO -->
+<div id="stateConfirm" class="hidden">
+  <div class="confirm-header">
+    <div class="confirm-icon" id="confirmIcon">💸</div>
+    <div class="confirm-title">Confirme o lançamento</div>
+    <div class="confirm-sub" id="confirmSub">Verifique se está correto</div>
+  </div>
+
+  <div class="ai-note" id="aiNote"></div>
+
+  <div class="amount-big expense" id="confirmAmount">R$ 0,00</div>
+
+  <div class="confirm-card">
+    <div class="confirm-field">
+      <span class="cf-icon">📝</span>
+      <div><div class="cf-label">Descrição</div><div class="cf-val" id="cfDesc">—</div></div>
+      <button class="cf-edit" onclick="editField('desc')">editar</button>
+    </div>
+    <div class="confirm-field">
+      <span class="cf-icon">📅</span>
+      <div><div class="cf-label">Data</div><div class="cf-val" id="cfDate">—</div></div>
+      <button class="cf-edit" onclick="editField('date')">editar</button>
+    </div>
+    <div class="confirm-field">
+      <span class="cf-icon">🏦</span>
+      <div><div class="cf-label">Conta</div><div class="cf-val" id="cfAcc">—</div></div>
+      <button class="cf-edit" onclick="editField('account')">editar</button>
+    </div>
+    <div class="confirm-field">
+      <span class="cf-icon">🏷️</span>
+      <div><div class="cf-label">Categoria</div><div class="cf-val" id="cfCat">—</div></div>
+      <button class="cf-edit" onclick="editField('category')">editar</button>
+    </div>
+    <div class="confirm-field">
+      <span class="cf-icon">💳</span>
+      <div><div class="cf-label">Status</div><div class="cf-val" id="cfStatus">—</div></div>
+      <button class="cf-edit" onclick="editField('status')">editar</button>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn-retry" onclick="retry()">🔄 Refazer</button>
+    <button class="btn-confirm" onclick="confirmLaunch()">✓ Confirmar lançamento</button>
+  </div>
+</div>
+
+<!-- ESTADO 3: SUCESSO -->
+<div id="stateSuccess" class="hidden">
+  <div class="success-icon">✅</div>
+  <div class="success-title">Lançado!</div>
+  <div class="success-sub" id="successSub">Transação registrada com sucesso.</div>
+  <div class="success-actions">
+    <button class="btn-novo" onclick="novoLancamento()">🎙️ Novo lançamento</button>
+    <button class="btn-ver" onclick="window.location.href='/finance'">Ver em Finanças →</button>
+  </div>
+</div>
+
+<!-- EDIT SHEET -->
+<div class="overlay hidden" id="editOverlay" onclick="closeEdit()">
+  <div class="edit-sheet" onclick="event.stopPropagation()">
+    <h3 id="editTitle">Editar</h3>
+    <div id="editContent"></div>
+    <div class="sheet-btns">
+      <button class="sheet-cancel" onclick="closeEdit()">Cancelar</button>
+      <button class="sheet-ok" onclick="applyEdit()">Aplicar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/shared.js"></script>
+<script>
+if (!Auth.requireLogin()) throw '';
+
+let recognition = null;
+let isListening  = false;
+let accounts     = [];
+let categories   = [];
+let interpreted  = {};
+let editingField = null;
+
+const today = new Date().toISOString().slice(0,10);
+
+// ── INIT ──────────────────────────────────────────────────
+async function init() {
+  try {
+    [accounts, categories] = await Promise.all([
+      API.get('/finance/accounts?family=true'),
+      API.get('/finance/categories'),
+    ]);
+  } catch(e) { showToast('Erro ao carregar dados', true); }
+
+  // Verificar suporte ao Speech Recognition
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    document.getElementById('micLabel').textContent = 'Voz não suportada';
+    document.getElementById('micSub').textContent   = 'Use o Chrome no Android para usar esta função.';
+    document.getElementById('micBtn').style.opacity = '.4';
+    document.getElementById('micBtn').style.cursor  = 'not-allowed';
+    document.getElementById('micBtn').onclick       = null;
+    return;
+  }
+
+  recognition = new SR();
+  recognition.continuous    = false;
+  recognition.interimResults = true;
+  recognition.lang          = 'pt-BR';
+
+  recognition.onstart = () => {
+    isListening = true;
+    document.getElementById('micWrap').classList.add('listening');
+    document.getElementById('micBtn').className   = 'mic-btn active';
+    document.getElementById('micBtn').textContent = '⏹️';
+    document.getElementById('micLabel').textContent = 'Ouvindo...';
+    document.getElementById('micSub').textContent   = 'Fale agora. Toque para parar.';
+    document.getElementById('transcriptBox').innerHTML = '<span style="color:var(--muted)">Aguardando...</span>';
+  };
+
+  recognition.onresult = (e) => {
+    let interim = '', final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    const text = (final || interim).trim();
+    const box = document.getElementById('transcriptBox');
+    box.classList.add('has-text');
+    box.textContent = text;
+  };
+
+  recognition.onend = () => {
+    isListening = false;
+    document.getElementById('micWrap').classList.remove('listening');
+    document.getElementById('micBtn').className   = 'mic-btn processing';
+    document.getElementById('micBtn').textContent = '⚙️';
+    document.getElementById('micLabel').textContent = 'Interpretando';
+    document.getElementById('micSub').innerHTML   = '<div class="loading-dots"><span></span><span></span><span></span></div>';
+    const text = document.getElementById('transcriptBox').textContent.trim();
+    if (text && text !== 'Aguardando...') interpret(text);
+    else resetMic();
+  };
+
+  recognition.onerror = (e) => {
+    console.warn('SR error:', e.error);
+    isListening = false;
+    resetMic();
+    if (e.error === 'not-allowed') showToast('Permita o acesso ao microfone', true);
+    else if (e.error === 'no-speech') showToast('Nenhuma fala detectada');
+  };
+}
+
+function toggleListen() {
+  if (!recognition) return;
+  if (isListening) { recognition.stop(); return; }
+  recognition.start();
+}
+
+function resetMic() {
+  document.getElementById('micBtn').className   = 'mic-btn idle';
+  document.getElementById('micBtn').textContent = '🎙️';
+  document.getElementById('micLabel').textContent = 'Toque para falar';
+  document.getElementById('micSub').textContent   = 'Diga o que gastou, quanto, onde e em qual conta';
+}
+
+function useHint(el) {
+  const text = el.querySelector('strong').nextSibling.textContent.trim().replace(/^"(.*)"$/, '$1');
+  document.getElementById('transcriptBox').classList.add('has-text');
+  document.getElementById('transcriptBox').textContent = text;
+  interpret(text);
+}
+
+// ── INTERPRETAR COM GROQ ──────────────────────────────────
+async function interpret(text) {
+  const accList  = accounts.map(a => `${a.name} (${a.owner_type.toUpperCase()})`).join(', ');
+  const catList  = categories.map(c => c.name).join(', ');
+  const todayFmt = new Date().toLocaleDateString('pt-BR');
+
+  const prompt = `Você é um assistente que interpreta comandos de voz financeiros em português.
+Extraia as informações e retorne APENAS JSON válido, sem texto extra, sem markdown.
+
+Contas disponíveis: ${accList}
+Categorias disponíveis: ${catList}
+Data de hoje: ${today} (${todayFmt})
+
+Regras:
+- "hoje" = ${today}, "ontem" = ${new Date(Date.now()-86400000).toISOString().slice(0,10)}
+- Se não souber a conta, use a primeira conta PJ disponível
+- type: "expense" para gastos/despesas/compras, "income" para receitas/recebimentos
+- status: "paid" se já pagou/gastou/recebeu, "pending" se vai pagar
+- category_name: escolha a mais adequada das categorias disponíveis
+- account_name: use o nome mais próximo das contas disponíveis
+- Se valores forem por extenso, converta: "noventa" = 90, "cento e cinquenta" = 150
+- confidence: 0 a 1, quão certo você está da interpretação
+
+Comando: "${text}"
+
+Retorne JSON:
+{
+  "amount": 0.00,
+  "description": "texto descritivo",
+  "type": "expense",
+  "category_name": "nome da categoria",
+  "account_name": "nome da conta",
+  "date": "YYYY-MM-DD",
+  "status": "paid",
+  "confidence": 0.9,
+  "note": "observação se houver dúvida"
+}`;
+
+  try {
+    const setting = await API.get('/admin/settings').catch(() => ({}));
+    if (!setting.groq_api_key) {
+      // Sem Groq: interpretar localmente (básico)
+      interpretBasic(text);
+      return;
+    }
+
+    const r = await API.post('/planning/chat', {
+      messages: [{ role: 'user', content: prompt }]
+    });
+
+    let json = r.reply.trim();
+    json = json.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+    const data = JSON.parse(json);
+    showConfirmation(data, text);
+  } catch(e) {
+    console.warn('Groq falhou, usando interpretação básica:', e);
+    interpretBasic(text);
+  }
+}
+
+// Interpretação básica sem IA (fallback)
+function interpretBasic(text) {
+  const t = text.toLowerCase();
+  const data = {
+    amount:        0,
+    description:   text,
+    type:          (t.includes('recebi') || t.includes('recebimento') || t.includes('mensalidade')) ? 'income' : 'expense',
+    category_name: '',
+    account_name:  accounts[0]?.name || '',
+    date:          today,
+    status:        'paid',
+    confidence:    0.5,
+    note:          'Interpretação básica — configure a chave Groq para melhor resultado',
+  };
+
+  // Valor
+  const numMatch = text.match(/[\d]+(?:[.,]\d{2})?/g);
+  if (numMatch) data.amount = parseFloat(numMatch[numMatch.length-1].replace(',','.'));
+
+  // Conta
+  accounts.forEach(a => { if (t.includes(a.name.toLowerCase().split('-')[0].trim())) data.account_name = a.name; });
+
+  showConfirmation(data, text);
+}
+
+// ── CONFIRMAÇÃO ───────────────────────────────────────────
+function showConfirmation(data, originalText) {
+  interpreted = data;
+
+  // Encontrar conta e categoria reais
+  const acc = accounts.find(a => a.name.toLowerCase().includes((data.account_name||'').toLowerCase().split(' ')[0]))
+           || accounts.find(a => a.name.toLowerCase().includes((data.account_name||'').toLowerCase()))
+           || accounts[0];
+  const cat = categories.find(c => c.name.toLowerCase() === (data.category_name||'').toLowerCase())
+           || categories.find(c => c.name.toLowerCase().includes((data.category_name||'').split(' ')[0].toLowerCase()));
+
+  interpreted._account_id  = acc?.id  || null;
+  interpreted._category_id = cat?.id  || null;
+  interpreted._account_name  = acc?.name || data.account_name || '—';
+  interpreted._category_name = cat?.name || data.category_name || '—';
+  interpreted._category_icon = cat?.icon || '📦';
+
+  const isIncome = data.type === 'income';
+  const amt = parseFloat(data.amount) || 0;
+  const dateStr = data.date || today;
+
+  document.getElementById('confirmIcon').textContent = isIncome ? '💰' : '💸';
+  document.getElementById('confirmSub').textContent  = `Baseado em: "${originalText.slice(0,50)}${originalText.length>50?'…':''}"`;
+
+  const amtEl = document.getElementById('confirmAmount');
+  amtEl.textContent = Fmt.brl(amt);
+  amtEl.className   = 'amount-big ' + (isIncome ? 'income' : 'expense');
+
+  document.getElementById('cfDesc').textContent   = data.description || '—';
+  document.getElementById('cfDate').textContent   = Fmt.date(dateStr);
+  document.getElementById('cfAcc').textContent    = interpreted._account_name;
+  document.getElementById('cfCat').textContent    = interpreted._category_icon + ' ' + interpreted._category_name;
+  document.getElementById('cfStatus').textContent = data.status === 'paid' ? (isIncome ? '✓ Recebido' : '✓ Pago') : '⏳ Pendente';
+
+  const note = document.getElementById('aiNote');
+  if (data.confidence < 0.7 || data.note) {
+    note.innerHTML = `<strong>⚠️ Atenção:</strong> ${data.note || 'Confiança baixa — verifique os campos antes de confirmar.'}`;
+    note.style.display = 'block';
+  } else {
+    note.style.display = 'none';
+  }
+
+  setState('confirm');
+}
+
+// ── CONFIRMAR LANÇAMENTO ──────────────────────────────────
+async function confirmLaunch() {
+  const body = {
+    type:        interpreted.type || 'expense',
+    description: interpreted.description,
+    amount:      parseFloat(interpreted.amount) || 0,
+    due_date:    interpreted.date || today,
+    status:      interpreted.status || 'paid',
+    account_id:  interpreted._account_id,
+    category_id: interpreted._category_id,
+    owner_type:  'pj',
+  };
+
+  if (!body.amount || body.amount <= 0) { showToast('Valor inválido — edite e corrija', true); return; }
+  if (!body.account_id) { showToast('Conta não identificada — edite e selecione', true); return; }
+
+  try {
+    const btn = document.querySelector('.btn-confirm');
+    btn.textContent = 'Salvando...'; btn.disabled = true;
+    await API.post('/finance/transactions', body);
+
+    document.getElementById('successSub').textContent =
+      `${body.type==='expense'?'-':'+'}${Fmt.brl(body.amount)} · ${body.description} · ${Fmt.date(body.due_date)}`;
+    setState('success');
+  } catch(e) {
+    document.querySelector('.btn-confirm').textContent = '✓ Confirmar lançamento';
+    document.querySelector('.btn-confirm').disabled = false;
+    showToast(e.message || 'Erro ao salvar', true);
+  }
+}
+
+// ── EDIÇÃO ────────────────────────────────────────────────
+function editField(field) {
+  editingField = field;
+  const overlay = document.getElementById('editOverlay');
+  const content = document.getElementById('editContent');
+  let title = '', html = '';
+
+  if (field === 'desc') {
+    title = 'Editar descrição';
+    html = `<div class="ef"><label>Descrição</label><input type="text" id="ef_val" value="${interpreted.description||''}"></div>`;
+  } else if (field === 'date') {
+    title = 'Editar data';
+    html = `<div class="ef"><label>Data</label><input type="date" id="ef_val" value="${interpreted.date||today}"></div>`;
+  } else if (field === 'account') {
+    title = 'Selecionar conta';
+    html = `<div class="ef"><label>Conta</label><select id="ef_val">${accounts.map(a=>`<option value="${a.id}" ${a.id===interpreted._account_id?'selected':''}>${a.name} (${a.owner_type.toUpperCase()})</option>`).join('')}</select></div>`;
+  } else if (field === 'category') {
+    title = 'Selecionar categoria';
+    html = `<div class="ef"><label>Categoria</label><select id="ef_val"><option value="">Sem categoria</option>${categories.map(c=>`<option value="${c.id}" ${c.id===interpreted._category_id?'selected':''}>${c.icon} ${c.name}</option>`).join('')}</select></div>`;
+  } else if (field === 'status') {
+    title = 'Status';
+    html = `<div class="ef"><label>Status</label><select id="ef_val"><option value="paid" ${interpreted.status==='paid'?'selected':''}>✓ Pago</option><option value="received" ${interpreted.status==='received'?'selected':''}>✓ Recebido</option><option value="pending" ${interpreted.status==='pending'?'selected':''}>⏳ Pendente</option></select></div>`;
+  }
+
+  document.getElementById('editTitle').textContent = title;
+  content.innerHTML = html;
+  overlay.classList.remove('hidden');
+  setTimeout(() => document.getElementById('ef_val')?.focus(), 100);
+}
+
+function applyEdit() {
+  const val = document.getElementById('ef_val')?.value;
+  if (editingField === 'desc') {
+    interpreted.description = val;
+    document.getElementById('cfDesc').textContent = val;
+  } else if (editingField === 'date') {
+    interpreted.date = val;
+    document.getElementById('cfDate').textContent = Fmt.date(val);
+  } else if (editingField === 'account') {
+    const acc = accounts.find(a => a.id == val);
+    interpreted._account_id   = acc?.id;
+    interpreted._account_name = acc?.name || '—';
+    document.getElementById('cfAcc').textContent = acc?.name || '—';
+  } else if (editingField === 'category') {
+    const cat = categories.find(c => c.id == val);
+    interpreted._category_id   = cat?.id  || null;
+    interpreted._category_name = cat?.name || '—';
+    document.getElementById('cfCat').textContent = (cat?.icon||'📦') + ' ' + (cat?.name||'—');
+  } else if (editingField === 'status') {
+    interpreted.status = val;
+    const isIncome = interpreted.type === 'income';
+    document.getElementById('cfStatus').textContent = val==='paid'?(isIncome?'✓ Recebido':'✓ Pago'):'⏳ Pendente';
+  }
+  closeEdit();
+}
+
+function closeEdit() { document.getElementById('editOverlay').classList.add('hidden'); }
+
+// ── NAVEGAÇÃO ─────────────────────────────────────────────
+function setState(s) {
+  ['listening','confirm','success'].forEach(x => {
+    document.getElementById('state'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('hidden', x!==s);
+  });
+  if (s === 'listening') resetMic();
+}
+
+function retry() { setState('listening'); }
+
+function novoLancamento() {
+  interpreted = {};
+  document.getElementById('transcriptBox').innerHTML = '<span class="transcript-placeholder">Ex: "Gastei R$ 85 de combustível hoje no Sicoob PJ"</span>';
+  document.getElementById('transcriptBox').classList.remove('has-text');
+  setState('listening');
+}
+
+// ── TOAST ─────────────────────────────────────────────────
+function showToast(msg, isError=false) {
+  const el = document.createElement('div');
+  el.className = 'toast' + (isError?' error':'');
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => { el.style.opacity='0'; setTimeout(()=>el.remove(),300); }, 3000);
+}
+
+init();
+</script>
+</body>
+</html>

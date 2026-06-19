@@ -1,0 +1,25 @@
+# Dependências
+node_modules/
+
+# Banco de dados (NUNCA versionar o banco de produção)
+database.db
+database.db.producao-backup
+*.db
+*.db-shm
+*.db-wal
+
+# Variáveis de ambiente (senhas, chaves)
+.env
+.env.local
+.env.production
+
+# Logs
+*.log
+logs/
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/settings.json

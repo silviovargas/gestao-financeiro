@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0F6E56">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="GF Ballet">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contas a Pagar/Receber — Gestão Financeira SL</title>
+<link rel="stylesheet" href="/css/global.css">
+<style>
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:1.25rem;}
+.month-group{margin-bottom:1.5rem;}
+.month-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+.month-header-vals{display:flex;gap:12px;font-size:12px;}
+.bill-row{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-top:none;transition:background .1s;}
+.bill-row:last-child{border-radius:0 0 var(--radius) var(--radius);}
+.bill-row:hover{background:var(--bg);}
+.bill-row.paid-row{opacity:.55;}
+.bill-status-icon{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;border:1.5px solid;}
+.st-pending{background:var(--bg);border-color:var(--border);color:var(--muted);}
+.st-paid   {background:var(--green-l);border-color:var(--green-b);color:var(--green);}
+.st-overdue{background:var(--red-l);border-color:var(--red-b);color:var(--red);}
+.st-soon   {background:var(--amber-l);border-color:var(--amber-b);color:var(--amber);}
+.bill-info{flex:1;min-width:0;}
+.bill-desc{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bill-meta{font-size:11px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.bill-date{font-size:12px;font-weight:500;white-space:nowrap;flex-shrink:0;}
+.bill-val{font-size:14px;font-weight:600;white-space:nowrap;flex-shrink:0;text-align:right;min-width:90px;}
+.bill-actions{display:flex;gap:5px;flex-shrink:0;}
+.pay-btn{background:var(--primary);color:#fff;border:none;border-radius:7px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;}
+.pay-btn:hover{filter:brightness(1.1);}
+.pay-btn.receive{background:var(--green);}
+.unpay-btn{background:var(--bg);color:var(--muted);border:1px solid var(--border);border-radius:7px;padding:5px 8px;font-size:11px;cursor:pointer;font-family:inherit;transition:all .15s;}
+.unpay-btn:hover{background:var(--red-l);color:var(--red);border-color:var(--red-b);}
+.inst-tag{font-size:10px;background:var(--purple-l);color:var(--purple);border:1px solid var(--purple-b);border-radius:10px;padding:1px 6px;white-space:nowrap;}
+.empty-bills{text-align:center;padding:3rem 1rem;color:var(--muted);}
+.empty-bills-icon{font-size:48px;margin-bottom:1rem;opacity:.35;}
+.type-toggle{display:flex;gap:6px;margin-bottom:.5rem;}
+.type-btn{flex:1;padding:8px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;color:var(--muted);}
+.type-btn.active-pay{background:var(--red-l);color:var(--red);border-color:var(--red-b);}
+.type-btn.active-rec{background:var(--green-l);color:var(--green);border-color:var(--green-b);}
+.pay-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.pay-row:last-child{border-bottom:none;}
+.pay-row-label{color:var(--muted);font-size:12px;}
+.pay-input-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.dre-wrap{overflow-x:auto;margin-bottom:1.25rem;}
+.dre-table{border-collapse:collapse;min-width:700px;width:100%;}
+.dre-table th{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:center;white-space:nowrap;border:1px solid var(--border);background:var(--bg);color:var(--muted);}
+.dre-table th.row-label{text-align:left;width:160px;}
+.dre-table td{padding:9px 12px;border:1px solid var(--border);font-size:13px;text-align:right;white-space:nowrap;}
+.dre-table td.row-label{text-align:left;font-weight:600;font-size:12px;background:var(--bg);}
+.dre-table tr.result-row td{font-weight:700;font-size:14px;}
+.dre-month-now th{background:var(--primary-l)!important;color:var(--primary)!important;}
+.dre-bar-wrap{height:4px;background:var(--border);border-radius:2px;margin-top:4px;}
+.dre-bar-fill{height:100%;border-radius:2px;max-width:100%;}
+.dre-badge{font-size:10px;padding:2px 6px;border-radius:10px;border:1px solid;white-space:nowrap;display:inline-block;margin-top:3px;}
+.dre-badge.all-paid{background:var(--green-l);color:var(--green);border-color:var(--green-b);}
+.dre-badge.partial {background:var(--amber-l);color:var(--amber);border-color:var(--amber-b);}
+.dre-badge.unpaid  {background:var(--red-l);color:var(--red);border-color:var(--red-b);}
+.dre-badge.future  {background:var(--bg);color:var(--muted);border-color:var(--border);}
+.dre-detail{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:1.25rem;display:none;}
+.dre-detail.open{display:block;}
+.dre-detail-header{padding:.875rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;}
+.dre-item-row{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px;}
+.dre-item-row:last-child{border-bottom:none;}
+</style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-content">
+
+    <div class="page-header">
+      <h1>💳 Contas a Pagar / Receber</h1>
+      <div class="page-header-actions">
+        <button class="btn btn-primary" onclick="openNew()">+ Nova conta</button>
+      </div>
+    </div>
+
+    <div class="page-body">
+
+      <!-- KPIs -->
+      <div class="kpi-row">
+        <div class="kpi-card"><div class="kpi-label">A pagar (período)</div><div class="kpi-val kpi-negative" id="kPay">—</div><div class="kpi-sub" id="kPayPaid">—</div></div>
+        <div class="kpi-card"><div class="kpi-label">A receber (período)</div><div class="kpi-val kpi-positive" id="kRec">—</div><div class="kpi-sub">previsto</div></div>
+        <div class="kpi-card"><div class="kpi-label">Pendente</div><div class="kpi-val kpi-neutral" id="kPend">—</div><div class="kpi-sub">ainda a pagar</div></div>
+        <div class="kpi-card"><div class="kpi-label">Vencidas</div><div class="kpi-val kpi-negative" id="kOver">—</div><div class="kpi-sub" id="kSoon">—</div></div>
+      </div>
+
+      <!-- TABS -->
+      <div class="tab-bar">
+        <button class="tab-btn active" id="vt-contas"   onclick="showView('contas')">💳 Contas</button>
+        <button class="tab-btn"        id="vt-projecao" onclick="showView('projecao')">📊 Projeção DRE</button>
+      </div>
+
+      <!-- VIEW CONTAS -->
+      <div id="view-contas">
+        <div class="filter-bar">
+          <div>
+            <div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:3px">Período</div>
+            <div style="display:flex;gap:5px;flex-wrap:wrap">
+              <button class="btn btn-sm btn-secondary" onclick="setPeriod(0)">Este mês</button>
+              <button class="btn btn-sm btn-secondary" onclick="setPeriod(3)">3 meses</button>
+              <button class="btn btn-sm btn-secondary" onclick="setPeriod(6)">6 meses</button>
+              <button class="btn btn-sm btn-secondary" onclick="setPeriod(12)">12 meses</button>
+              <button class="btn btn-sm btn-secondary" onclick="setPeriod(24)">2 anos</button>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+            <div class="field" style="margin:0"><label class="lbl">De</label><input type="month" id="fFrom" style="padding:6px 10px"></div>
+            <div class="field" style="margin:0"><label class="lbl">Até</label><input type="month" id="fTo"   style="padding:6px 10px"></div>
+          </div>
+          <select id="fStatus" onchange="applyFilters()" style="padding:7px 10px">
+            <option value="">Todos</option>
+            <option value="pending">Pendentes</option>
+            <option value="paid">Pagos/Recebidos</option>
+            <option value="overdue">Vencidos</option>
+          </select>
+          <select id="fType" onchange="applyFilters()" style="padding:7px 10px">
+            <option value="">Pagar + Receber</option>
+            <option value="expense">A pagar</option>
+            <option value="income">A receber</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="loadBills()">Filtrar</button>
+        </div>
+        <div id="billsList"><div class="empty-bills"><div class="empty-bills-icon">⏳</div><p>Carregando...</p></div></div>
+      </div>
+
+      <!-- VIEW PROJEÇÃO -->
+      <div id="view-projecao" style="display:none">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
+          <span style="font-size:13px;color:var(--muted)">Projeção para:</span>
+          <button class="btn btn-sm btn-secondary" onclick="loadProjection(6)">6 meses</button>
+          <button class="btn btn-sm btn-secondary" onclick="loadProjection(12)">12 meses</button>
+          <button class="btn btn-sm btn-secondary" onclick="loadProjection(24)">24 meses</button>
+          <span style="font-size:11px;color:var(--muted);margin-left:8px">Clique no mês para ver os detalhes</span>
+        </div>
+        <div class="dre-wrap">
+          <table class="dre-table" id="dreTable">
+            <thead><tr><th class="row-label">Carregando...</th></tr></thead>
+            <tbody id="dreBody"></tbody>
+          </table>
+        </div>
+        <div class="dre-detail" id="dreDetail">
+          <div class="dre-detail-header">
+            <span id="dreDetailTitle">—</span>
+            <button class="btn btn-ghost btn-sm" onclick="closeDreDetail()">✕ Fechar</button>
+          </div>
+          <div id="dreDetailBody"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NOVA/EDITAR CONTA -->
+<div class="overlay" id="billModal" onclick="closeOnOverlay(event)">
+  <div class="modal modal-lg">
+    <h3 id="billModalTitle">Nova conta</h3>
+    <input type="hidden" id="bmEditId">
+    <div class="field">
+      <label class="lbl">Tipo</label>
+      <div class="type-toggle">
+        <button class="type-btn" id="btnPay" onclick="setBillType('expense')">💸 A pagar</button>
+        <button class="type-btn" id="btnRec" onclick="setBillType('income')">💰 A receber</button>
+      </div>
+      <input type="hidden" id="bmType" value="expense">
+    </div>
+    <div class="field">
+      <label class="lbl">Descrição</label>
+      <input type="text" id="bmDesc" placeholder="Ex: Escola Antonella, Fatura Nubank, Aluguel Studio...">
+    </div>
+    <div class="field-row">
+      <div class="field"><label class="lbl">Valor (R$)</label><input type="number" id="bmAmount" step="0.01" min="0" placeholder="0,00"></div>
+      <div class="field"><label class="lbl">Primeiro vencimento</label><input type="date" id="bmDueDate"></div>
+    </div>
+    <div class="field">
+      <label class="lbl">Repetir lançamento</label>
+      <div style="display:flex;align-items:center;gap:10px">
+        <select id="bmRepeat" onchange="updateRepeatPreview()" style="flex:1">
+          <option value="1">Não repetir (lançamento único)</option>
+          <option value="2">2x</option><option value="3">3x</option><option value="4">4x</option>
+          <option value="5">5x</option><option value="6">6x</option><option value="7">7x</option>
+          <option value="8">8x</option><option value="9">9x</option><option value="10">10x</option>
+          <option value="11">11x</option><option value="12">12x — 1 ano</option>
+          <option value="18">18x</option><option value="24">24x — 2 anos</option>
+          <option value="36">36x — 3 anos</option><option value="48">48x — 4 anos</option>
+        </select>
+        <span id="repeatPreview" style="font-size:11px;color:var(--muted);white-space:nowrap"></span>
+      </div>
+      <div class="field-hint">Cria N lançamentos mensais. O saldo só é afetado ao dar baixa.</div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label class="lbl">Conta</label><select id="bmAccount"><option value="">Sem conta específica</option></select></div>
+      <div class="field"><label class="lbl">Categoria</label><select id="bmCategory"><option value="">Sem categoria</option></select></div>
+    </div>
+    <div class="field">
+      <label class="lbl">PF / PJ</label>
+      <select id="bmOwnerType"><option value="pj">Empresa (PJ)</option><option value="pf">Pessoa Física</option></select>
+    </div>
+    <div class="field"><label class="lbl">Observações</label><textarea id="bmNotes" rows="2" placeholder="Opcional..."></textarea></div>
+    <div id="bmErr" class="alert alert-error" style="display:none"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('billModal')">Cancelar</button>
+      <button class="btn btn-primary" id="bmSaveBtn" onclick="saveBill()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PAGAR -->
+<div class="overlay" id="payModal" onclick="closeOnOverlay(event)">
+  <div class="modal" style="max-width:420px">
+    <h3 id="payModalTitle">Dar baixa</h3>
+    <input type="hidden" id="pmBillId">
+    <input type="hidden" id="pmOriginalAmount">
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:1rem">
+      <div style="font-size:13px;font-weight:600" id="pmDesc">—</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:3px" id="pmInfo">—</div>
+    </div>
+    <div class="pay-row"><span class="pay-row-label">Valor original</span><span id="pmOrigVal" style="font-weight:600">—</span></div>
+    <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:12px;color:var(--muted)">Multa / Juros</span>
+        <span id="pmFineVal" style="font-size:12px;color:var(--red);font-weight:500">+ R$ 0,00</span>
+      </div>
+      <div class="pay-input-row">
+        <div class="field" style="margin:0"><label class="lbl">% multa</label><input type="number" id="pmFinePct" step="0.01" min="0" value="0" oninput="recalcPay()"></div>
+        <div class="field" style="margin:0"><label class="lbl">R$ multa</label><input type="number" id="pmFineAmt" step="0.01" min="0" value="0" oninput="recalcPay()"></div>
+      </div>
+    </div>
+    <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:12px;color:var(--muted)">Desconto</span>
+        <span id="pmDiscVal" style="font-size:12px;color:var(--green);font-weight:500">- R$ 0,00</span>
+      </div>
+      <div class="pay-input-row">
+        <div class="field" style="margin:0"><label class="lbl">% desconto</label><input type="number" id="pmDiscPct" step="0.01" min="0" value="0" oninput="recalcPay()"></div>
+        <div class="field" style="margin:0"><label class="lbl">R$ desconto</label><input type="number" id="pmDiscAmt" step="0.01" min="0" value="0" oninput="recalcPay()"></div>
+      </div>
+    </div>
+    <div class="pay-row" style="margin-top:8px">
+      <span style="font-weight:600;font-size:13px">Total</span>
+      <span style="font-size:18px;font-weight:700;color:var(--primary)" id="pmTotal">R$ 0,00</span>
+    </div>
+    <div class="field-row" style="margin-top:1rem">
+      <div class="field" style="margin:0"><label class="lbl">Data do pagamento</label><input type="date" id="pmDate"></div>
+      <div class="field" style="margin:0"><label class="lbl">Conta</label><select id="pmAccount"><option value="">Mesma conta</option></select></div>
+    </div>
+    <div id="pmErr" class="alert alert-error" style="display:none;margin-top:.75rem"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('payModal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmPay()">✓ Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EXCLUIR -->
+<div class="overlay" id="deleteModal" onclick="closeOnOverlay(event)">
+  <div class="modal" style="max-width:360px">
+    <h3>Excluir conta</h3>
+    <input type="hidden" id="dmBillId"><input type="hidden" id="dmHasGroup">
+    <p style="font-size:13px;color:var(--muted);margin-bottom:1.25rem">Como deseja excluir?</p>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-danger" onclick="confirmDelete(false)">🗑️ Excluir apenas esta parcela</button>
+      <button class="btn btn-secondary" id="dmDeleteAll" onclick="confirmDelete(true)">🗑️ Excluir todas as parcelas pendentes</button>
+    </div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('deleteModal')">Cancelar</button></div>
+  </div>
+</div>
+
+<script src="/js/shared.js"></script>
+<script>
+if (!Auth.requireLogin()) throw '';
+if (!Auth.hasPerm('finance','view')) { window.location.href='/home'; throw ''; }
+buildSidebar('contas');
+
+let accounts=[], categories=[], allBills=[];
+const today = currentDate();
+
+// ── VIEWS ─────────────────────────────────────────────────────
+function showView(id) {
+  ['contas','projecao'].forEach(v => {
+    document.getElementById('view-'+v).style.display = v===id?'':'none';
+    document.getElementById('vt-'+v).classList.toggle('active', v===id);
+  });
+  if (id === 'projecao') loadProjection(12);
+}
+
+// ── PERÍODO ────────────────────────────────────────────────────
+function setPeriod(months) {
+  const now  = new Date();
+  const from = now.toISOString().slice(0,7);
+  const to   = new Date(now.getFullYear(), now.getMonth()+Math.max(months,1), 0).toISOString().slice(0,7);
+  document.getElementById('fFrom').value = from;
+  document.getElementById('fTo').value   = to;
+  loadBills();
+}
+
+// ── CARREGAR ──────────────────────────────────────────────────
+async function loadMeta() {
+  try {
+    [accounts, categories] = await Promise.all([
+      API.get('/finance/accounts?family=true'),
+      API.get('/finance/categories'),
+    ]);
+    const accOpts = accounts.map(a =>
+      '<option value="'+a.id+'">'+a.name+' ('+a.owner_type.toUpperCase()+')</option>'
+    ).join('');
+    ['bmAccount'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const cur = el.value;
+      el.innerHTML = '<option value="">Sem conta específica</option>' + accOpts;
+      if (cur) el.value = cur;
+    });
+    const pmAcc = document.getElementById('pmAccount');
+    if (pmAcc) {
+      const cur = pmAcc.value;
+      pmAcc.innerHTML = '<option value="">Mesma conta</option>' + accOpts;
+      if (cur) pmAcc.value = cur;
+    }
+    const catOpts = categories.map(c =>
+      '<option value="'+c.id+'">'+(c.icon||'')+'  '+c.name+'</option>'
+    ).join('');
+    const bmCat = document.getElementById('bmCategory');
+    if (bmCat) { const cur=bmCat.value; bmCat.innerHTML='<option value="">Sem categoria</option>'+catOpts; if(cur) bmCat.value=cur; }
+  } catch(e) {}
+}
+
+async function loadBills() {
+  document.getElementById('billsList').innerHTML = '<div class="empty-bills"><div class="empty-bills-icon">⏳</div><p>Carregando...</p></div>';
+  const from = document.getElementById('fFrom').value;
+  const to   = document.getElementById('fTo').value;
+  if (!from || !to) return;
+  try {
+    // Buscar TODAS as transações do período (paid e pending)
+    allBills = await API.get('/finance/transactions?family=true&from='+from+'&to='+to);
+    renderKPIs(allBills);
+    applyFilters();
+  } catch(e) {
+    document.getElementById('billsList').innerHTML = '<div class="empty-bills"><div class="empty-bills-icon">❌</div><p>Erro ao carregar: '+e.message+'</p></div>';
+  }
+}
+
+// ── KPIs calculados client-side ────────────────────────────────
+function renderKPIs(list) {
+  const totalPay     = list.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount, 0);
+  const paidPay      = list.filter(t=>t.type==='expense'&&t.status==='paid').reduce((s,t)=>s+(t.paid_amount||t.amount), 0);
+  const pendingPay   = list.filter(t=>t.type==='expense'&&t.status==='pending').reduce((s,t)=>s+t.amount, 0);
+  const totalRec     = list.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount, 0);
+  const overdueCount = list.filter(t=>t.status==='pending'&&t.due_date<today).length;
+  const soonCount    = list.filter(t=>{
+    if (t.status!=='pending') return false;
+    const d = Math.round((new Date(t.due_date+'T12:00:00') - new Date(today+'T12:00:00'))/86400000);
+    return d>=0 && d<=7;
+  }).length;
+
+  document.getElementById('kPay').textContent     = Fmt.brl(totalPay);
+  document.getElementById('kPayPaid').textContent = Fmt.brl(paidPay) + ' pago';
+  document.getElementById('kRec').textContent     = Fmt.brl(totalRec);
+  document.getElementById('kPend').textContent    = Fmt.brl(pendingPay);
+  document.getElementById('kOver').textContent    = overdueCount + ' conta(s)';
+  document.getElementById('kSoon').textContent    = soonCount + ' vencem em 7 dias';
+}
+
+// ── FILTROS CLIENT-SIDE ────────────────────────────────────────
+function applyFilters() {
+  const status = document.getElementById('fStatus').value;
+  const type   = document.getElementById('fType').value;
+
+  let list = allBills;
+  if (type) list = list.filter(t => t.type === type);
+  if (status === 'pending')  list = list.filter(t => t.status === 'pending');
+  if (status === 'paid')     list = list.filter(t => t.status === 'paid' || t.status === 'received');
+  if (status === 'overdue')  list = list.filter(t => t.status === 'pending' && t.due_date < today);
+
+  renderBills(list);
+}
+
+// ── LISTA ──────────────────────────────────────────────────────
+function daysUntil(d) {
+  return Math.round((new Date(d+'T12:00:00') - new Date(today+'T12:00:00')) / 86400000);
+}
+
+function renderBills(list) {
+  if (!list.length) {
+    document.getElementById('billsList').innerHTML = '<div class="empty-bills"><div class="empty-bills-icon">📭</div><p>Nenhuma conta encontrada.</p><button class="btn btn-primary" style="margin-top:1rem" onclick="openNew()">+ Lançar primeira conta</button></div>';
+    return;
+  }
+  const groups = {};
+  list.forEach(t => { const m=t.due_date.slice(0,7); if(!groups[m]) groups[m]=[]; groups[m].push(t); });
+  let html = '';
+  Object.keys(groups).sort().forEach(month => {
+    const items   = groups[month];
+    const totPay  = items.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount, 0);
+    const totRec  = items.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount, 0);
+    const paidCnt = items.filter(t=>t.status==='paid'||t.status==='received').length;
+    html += '<div class="month-group">'+
+      '<div class="month-header">'+
+        '<span>'+Fmt.month(month)+' · '+items.length+' conta(s) · '+paidCnt+' paga(s)</span>'+
+        '<div class="month-header-vals">'+
+          (totPay?'<span class="val-negative">-'+Fmt.brl(totPay)+'</span>':'')+
+          (totRec?'<span class="val-positive">+'+Fmt.brl(totRec)+'</span>':'')+
+        '</div>'+
+      '</div>'+
+      items.map(t => billRow(t)).join('') +
+    '</div>';
+  });
+  document.getElementById('billsList').innerHTML = html;
+}
+
+function billRow(t) {
+  const isPaid  = t.status==='paid' || t.status==='received';
+  const du      = daysUntil(t.due_date);
+  const isOver  = !isPaid && t.due_date < today;
+  const isSoon  = !isPaid && du >= 0 && du <= 7;
+  let stClass   = isPaid ? 'st-paid' : isOver ? 'st-overdue' : isSoon ? 'st-soon' : 'st-pending';
+  let stIcon    = isPaid ? '✓' : isOver ? '!' : isSoon ? '⏰' : '○';
+  const isExp   = t.type === 'expense';
+  const canPay  = Auth.hasPerm('finance','launch');
+  const canEdit = Auth.hasPerm('finance','edit');
+  const canDel  = Auth.hasPerm('finance','delete');
+
+  return '<div class="bill-row '+(isPaid?'paid-row':'')+'">'+
+    '<div class="bill-status-icon '+stClass+'">'+stIcon+'</div>'+
+    '<div class="bill-info">'+
+      '<div class="bill-desc">'+(t.description||'—')+'</div>'+
+      '<div class="bill-meta">'+
+        (t.cat_icon||'')+(t.cat_name?'<span>'+t.cat_name+'</span>':'')+
+        (t.acc_name?'<span>· '+t.acc_name+'</span>':'')+
+        '<span class="badge '+(t.owner_type==='pf'?'badge-transfer':'badge-fixed')+'" style="font-size:9px">'+(t.owner_type==='pf'?'PF':'PJ')+'</span>'+
+        (t.installment_total>1?'<span class="inst-tag">'+t.installment_num+'/'+t.installment_total+'</span>':'')+
+        (isPaid&&t.paid_at?'<span style="color:var(--green)">Pago '+Fmt.date(t.paid_at)+' · '+Fmt.brl(t.paid_amount||t.amount)+'</span>':'')+
+        (isOver?'<span style="color:var(--red)">⚠ '+(du*-1)+' dia(s) em atraso</span>':'')+
+        (isSoon&&!isOver?'<span style="color:var(--amber)">Vence em '+du+' dia(s)</span>':'')+
+      '</div>'+
+    '</div>'+
+    '<div class="bill-date">'+Fmt.date(t.due_date)+'</div>'+
+    '<div class="bill-val '+(isExp?'val-negative':'val-positive')+'">'+(isExp?'-':'+')+Fmt.brl(t.amount)+'</div>'+
+    '<div class="bill-actions">'+
+      (!isPaid&&canPay?'<button class="pay-btn '+(isExp?'':'receive')+'" onclick="openPay('+t.id+')">'+(isExp?'✓ Pagar':'✓ Receber')+'</button>':'')+
+      (isPaid&&canPay?'<button class="unpay-btn" onclick="estornar('+t.id+')">↩ Estornar</button>':'')+
+      (canEdit&&!isPaid?'<button class="btn-icon" onclick="openEdit('+t.id+')" title="Editar">✏️</button>':'')+
+      (canDel&&!isPaid?'<button class="btn-icon" style="color:var(--red)" onclick="openDelete('+t.id+',\''+( t.installment_group||'')+'\')">🗑️</button>':'')+
+    '</div>'+
+  '</div>';
+}
+
+// ── PROJEÇÃO DRE ───────────────────────────────────────────────
+let projMonths=[], projAllTx=[];
+
+async function loadProjection(months) {
+  document.getElementById('dreTable').innerHTML = '<thead><tr><th class="row-label">Carregando...</th></tr></thead><tbody></tbody>';
+  try {
+    const now  = new Date();
+    const from = now.toISOString().slice(0,7);
+    const d2   = new Date(now.getFullYear(), now.getMonth()+months, 0);
+    const to   = d2.toISOString().slice(0,7);
+    projAllTx  = await API.get('/finance/transactions?family=true&from='+from+'&to='+to);
+    // Montar lista de meses
+    projMonths = [];
+    for (let i=0; i<months; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth()+i, 1);
+      projMonths.push(d.toISOString().slice(0,7));
+    }
+    renderDRE();
+  } catch(e) { showToast('Erro ao carregar projeção: '+e.message,'error'); }
+}
+
+function renderDRE() {
+  const nowM = currentMonth();
+  // Agregar por mês
+  const byMonth = {};
+  projMonths.forEach(m => {
+    const items = projAllTx.filter(t => t.month===m);
+    const payable    = items.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+    const receivable = items.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+    const paid_pay   = items.filter(t=>t.type==='expense'&&t.status==='paid').reduce((s,t)=>s+(t.paid_amount||t.amount),0);
+    const pend_pay   = items.filter(t=>t.type==='expense'&&t.status==='pending').reduce((s,t)=>s+t.amount,0);
+    byMonth[m] = {month:m, payable, receivable, paid_payable:paid_pay, pending_payable:pend_pay, result:receivable-payable, items};
+  });
+
+  // Cabeçalho
+  let thead = '<tr><th class="row-label">—</th>'+projMonths.map(m => {
+    const isNow = m===nowM;
+    return '<th class="'+(isNow?'dre-month-now':'')+'" style="cursor:pointer" onclick="toggleDreDetail(\''+m+'\')">'+
+      Fmt.month(m)+'<br>'+statusBadge(byMonth[m])+
+    '</th>';
+  }).join('')+'</tr>';
+
+  const rows = [
+    {label:'💰 A Receber',  key:'receivable',        cls:'val-positive'},
+    {label:'💸 A Pagar',    key:'payable',            cls:'val-negative'},
+    {label:'📊 Resultado',  key:'result',             cls:'',result:true},
+    {label:'✓ Pago',        key:'paid_payable',       cls:'val-positive'},
+    {label:'⏳ Pendente',   key:'pending_payable',    cls:'val-negative'},
+  ];
+
+  let tbody = '';
+  rows.forEach(r => {
+    tbody += '<tr class="'+(r.result?'result-row':'')+'"><td class="row-label">'+r.label+'</td>';
+    projMonths.forEach(m => {
+      const v   = byMonth[m][r.key]||0;
+      let cls   = r.cls;
+      if (r.result) cls = v>=0?'val-positive':'val-negative';
+      tbody += '<td class="'+cls+'">'+(r.result&&v>=0?'+':'')+Fmt.brl(v)+'</td>';
+    });
+    tbody += '</tr>';
+  });
+
+  // Barra progresso
+  tbody += '<tr><td class="row-label" style="font-size:11px;color:var(--muted)">Progresso</td>';
+  projMonths.forEach(m => {
+    const d   = byMonth[m];
+    const pct = d.payable>0 ? Math.round(d.paid_payable/d.payable*100) : 0;
+    const col = pct===100?'var(--green)':pct>50?'var(--primary)':'var(--amber)';
+    tbody += '<td style="padding:8px 12px"><div style="font-size:10px;text-align:right;color:var(--muted);margin-bottom:3px">'+pct+'%</div><div class="dre-bar-wrap"><div class="dre-bar-fill" style="width:'+pct+'%;background:'+col+'"></div></div></td>';
+  });
+  tbody += '</tr>';
+
+  document.getElementById('dreTable').innerHTML = '<thead>'+thead+'</thead><tbody>'+tbody+'</tbody>';
+}
+
+function statusBadge(d) {
+  if (!d||(!d.payable&&!d.receivable)) return '<span class="dre-badge future">Vazio</span>';
+  if (d.pending_payable<=0&&d.payable>0) return '<span class="dre-badge all-paid">✓ Pago</span>';
+  if (d.paid_payable>0) return '<span class="dre-badge partial">Parcial</span>';
+  if (d.month<currentMonth()) return '<span class="dre-badge unpaid">Em atraso</span>';
+  return '<span class="dre-badge future">Previsto</span>';
+}
+
+let openDetailMonth = null;
+function toggleDreDetail(month) {
+  if (openDetailMonth===month) { closeDreDetail(); return; }
+  openDetailMonth = month;
+  const items  = projAllTx.filter(t=>t.month===month);
+  const canPay = Auth.hasPerm('finance','launch');
+  document.getElementById('dreDetailTitle').textContent = Fmt.month(month)+' — '+items.length+' conta(s)';
+  document.getElementById('dreDetailBody').innerHTML = items.map(t => {
+    const isExp = t.type==='expense';
+    const isPaid= t.status==='paid'||t.status==='received';
+    return '<div class="dre-item-row">'+
+      '<span>'+(t.cat_icon||'📦')+'</span>'+
+      '<div style="flex:1;min-width:0"><div style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(t.description||'—')+'</div>'+
+      '<div style="font-size:10px;color:var(--muted)">'+Fmt.date(t.due_date)+(t.acc_name?' · '+t.acc_name:'')+'</div></div>'+
+      '<span class="'+(isExp?'val-negative':'val-positive')+'">'+(isExp?'-':'+')+Fmt.brl(t.amount)+'</span>'+
+      (isPaid?'<span style="color:var(--green);font-size:11px;margin-left:8px">✓ Pago</span>':
+        canPay?'<button class="pay-btn" style="margin-left:8px;padding:3px 10px;font-size:11px" onclick="openPayById('+t.id+')">'+(isExp?'Pagar':'Receber')+'</button>':'')+
+    '</div>';
+  }).join('')||'<div style="padding:1.5rem;text-align:center;color:var(--muted)">Nenhum lançamento neste mês.</div>';
+  document.getElementById('dreDetail').classList.add('open');
+  document.getElementById('dreDetail').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function closeDreDetail() {
+  openDetailMonth = null;
+  document.getElementById('dreDetail').classList.remove('open');
+}
+
+async function openPayById(id) {
+  const t = projAllTx.find(x=>x.id===id)||allBills.find(x=>x.id===id);
+  if (!t) return;
+  await loadMeta();
+  openPayWithData(t);
+}
+
+// ── MODAIS NOVA/EDITAR ─────────────────────────────────────────
+function openNew() {
+  document.getElementById('billModalTitle').textContent = 'Nova conta';
+  document.getElementById('bmEditId').value   = '';
+  document.getElementById('bmDesc').value     = '';
+  document.getElementById('bmAmount').value   = '';
+  document.getElementById('bmDueDate').value  = today;
+  document.getElementById('bmRepeat').value   = '1';
+  document.getElementById('bmNotes').value    = '';
+  document.getElementById('bmOwnerType').value= 'pj';
+  document.getElementById('bmErr').style.display = 'none';
+  document.getElementById('repeatPreview').textContent = '';
+  setBillType('expense');
+  loadMeta();
+  openModal('billModal');
+}
+
+function openEdit(id) {
+  const t = allBills.find(x=>x.id===id)||projAllTx.find(x=>x.id===id);
+  if (!t) return;
+  document.getElementById('billModalTitle').textContent = 'Editar conta';
+  document.getElementById('bmEditId').value    = id;
+  document.getElementById('bmDesc').value      = t.description;
+  document.getElementById('bmAmount').value    = t.amount;
+  document.getElementById('bmDueDate').value   = t.due_date;
+  document.getElementById('bmRepeat').value    = '1';
+  document.getElementById('bmNotes').value     = t.notes||'';
+  document.getElementById('bmOwnerType').value = t.owner_type||'pj';
+  document.getElementById('bmErr').style.display = 'none';
+  setBillType(t.type);
+  loadMeta().then(() => {
+    document.getElementById('bmAccount').value  = t.account_id||'';
+    document.getElementById('bmCategory').value = t.category_id||'';
+  });
+  openModal('billModal');
+}
+
+function setBillType(type) {
+  document.getElementById('bmType').value = type;
+  document.getElementById('btnPay').className = 'type-btn'+(type==='expense'?' active-pay':'');
+  document.getElementById('btnRec').className = 'type-btn'+(type==='income'?' active-rec':'');
+  document.getElementById('bmSaveBtn').textContent = type==='expense'?'Salvar conta a pagar':'Salvar conta a receber';
+}
+
+function updateRepeatPreview() {
+  const n = parseInt(document.getElementById('bmRepeat').value);
+  const d = document.getElementById('bmDueDate').value;
+  if (n<=1||!d) { document.getElementById('repeatPreview').textContent=''; return; }
+  const last = new Date(d+'T12:00:00'); last.setMonth(last.getMonth()+n-1);
+  document.getElementById('repeatPreview').textContent = 'Última: '+Fmt.date(last.toISOString());
+}
+
+async function saveBill() {
+  const editId = document.getElementById('bmEditId').value;
+  const body = {
+    type:              document.getElementById('bmType').value,       // 'expense' ou 'income'
+    description:       document.getElementById('bmDesc').value.trim(),
+    amount:            parseFloat(document.getElementById('bmAmount').value),
+    due_date:          document.getElementById('bmDueDate').value,
+    status:            'pending',
+    installment_total: parseInt(document.getElementById('bmRepeat').value)||1,
+    account_id:        document.getElementById('bmAccount').value||null,
+    category_id:       document.getElementById('bmCategory').value||null,
+    owner_type:        document.getElementById('bmOwnerType').value,
+    notes:             document.getElementById('bmNotes').value.trim()||null,
+  };
+  const errEl = document.getElementById('bmErr');
+  errEl.style.display = 'none';
+  if (!body.description) { errEl.textContent='Informe a descrição.';  errEl.style.display='flex'; return; }
+  if (!body.amount||body.amount<=0) { errEl.textContent='Informe o valor.'; errEl.style.display='flex'; return; }
+  if (!body.due_date)    { errEl.textContent='Informe o vencimento.'; errEl.style.display='flex'; return; }
+  try {
+    if (editId) {
+      await API.put('/finance/transactions/'+editId, body);
+      showToast('Atualizado!','success');
+    } else {
+      const r = await API.post('/finance/transactions', body);
+      showToast((r.installment_total||1)+' lançamento(s) criado(s)!','success');
+    }
+    closeModal('billModal');
+    loadBills();
+  } catch(e) { errEl.textContent=e.message; errEl.style.display='flex'; }
+}
+
+// ── MODAL PAGAR ────────────────────────────────────────────────
+function openPay(id) {
+  const t = allBills.find(x=>x.id===id);
+  if (!t) return;
+  openPayWithData(t);
+}
+
+function openPayWithData(t) {
+  document.getElementById('pmBillId').value         = t.id;
+  document.getElementById('pmOriginalAmount').value = t.amount;
+  document.getElementById('pmDesc').textContent     = t.description||'—';
+  document.getElementById('pmInfo').textContent     = 'Vencimento: '+Fmt.date(t.due_date)+' · '+Fmt.brl(t.amount);
+  document.getElementById('pmOrigVal').textContent  = Fmt.brl(t.amount);
+  document.getElementById('pmDate').value           = today;
+  document.getElementById('pmFinePct').value='0'; document.getElementById('pmFineAmt').value='0';
+  document.getElementById('pmDiscPct').value='0'; document.getElementById('pmDiscAmt').value='0';
+  document.getElementById('pmErr').style.display = 'none';
+  document.getElementById('payModalTitle').textContent = t.type==='expense'?'✓ Pagar conta':'✓ Confirmar recebimento';
+  document.getElementById('pmAccount').value = t.account_id||'';
+  recalcPay();
+  openModal('payModal');
+}
+
+function recalcPay() {
+  const orig   = parseFloat(document.getElementById('pmOriginalAmount').value)||0;
+  let finePct  = parseFloat(document.getElementById('pmFinePct').value)||0;
+  let fineAmt  = parseFloat(document.getElementById('pmFineAmt').value)||0;
+  let discPct  = parseFloat(document.getElementById('pmDiscPct').value)||0;
+  let discAmt  = parseFloat(document.getElementById('pmDiscAmt').value)||0;
+  if (finePct>0) fineAmt = orig*finePct/100;
+  if (discPct>0) discAmt = orig*discPct/100;
+  document.getElementById('pmFineVal').textContent = '+ '+Fmt.brl(fineAmt);
+  document.getElementById('pmDiscVal').textContent = '- '+Fmt.brl(discAmt);
+  document.getElementById('pmTotal').textContent   = Fmt.brl(Math.max(0,orig+fineAmt-discAmt));
+}
+
+async function confirmPay() {
+  const id     = document.getElementById('pmBillId').value;
+  const orig   = parseFloat(document.getElementById('pmOriginalAmount').value)||0;
+  let finePct  = parseFloat(document.getElementById('pmFinePct').value)||0;
+  let fineAmt  = parseFloat(document.getElementById('pmFineAmt').value)||0;
+  let discPct  = parseFloat(document.getElementById('pmDiscPct').value)||0;
+  let discAmt  = parseFloat(document.getElementById('pmDiscAmt').value)||0;
+  if (finePct>0) fineAmt=orig*finePct/100;
+  if (discPct>0) discAmt=orig*discPct/100;
+  const errEl = document.getElementById('pmErr');
+  errEl.style.display = 'none';
+  try {
+    // v2 API: /finance/transactions/:id/pay  —  campo paid_at (não paid_date)
+    const r = await API.patch('/finance/transactions/'+id+'/pay', {
+      paid_at:         document.getElementById('pmDate').value||today,
+      fine_pct:        finePct,
+      fine_amount:     fineAmt,
+      discount_pct:    discPct,
+      discount_amount: discAmt,
+      paid_account_id: document.getElementById('pmAccount').value||null,
+    });
+    showToast('Baixa confirmada! '+Fmt.brl(r.paid_amount),'success');
+    closeModal('payModal');
+    loadBills();
+  } catch(e) { errEl.textContent=e.message; errEl.style.display='flex'; }
+}
+
+async function estornar(id) {
+  if (!await confirmAction('Estornar este pagamento? O saldo da conta será revertido.')) return;
+  try {
+    await API.patch('/finance/transactions/'+id+'/unpay', {});
+    showToast('Pagamento estornado.','info');
+    loadBills();
+  } catch(e) { showToast(e.message,'error'); }
+}
+
+function openDelete(id, group) {
+  document.getElementById('dmBillId').value   = id;
+  document.getElementById('dmHasGroup').value = group;
+  document.getElementById('dmDeleteAll').style.display = group ? '' : 'none';
+  openModal('deleteModal');
+}
+
+async function confirmDelete(all) {
+  const id    = document.getElementById('dmBillId').value;
+  const group = document.getElementById('dmHasGroup').value;
+  try {
+    const r = await API.delete('/finance/transactions/'+id+(all&&group?'?all_installments=true':''));
+    showToast(r.deleted>1?r.deleted+' parcelas excluídas.':'Conta excluída.','info');
+    closeModal('deleteModal');
+    loadBills();
+  } catch(e) { showToast(e.message,'error'); }
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+setPeriod(3);
+loadMeta();
+</script>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(e=>console.warn(e));}</script>
+</body>
+</html>
