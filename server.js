@@ -1371,21 +1371,23 @@ app.post('/api/shop/products/recognize', auth, perm('shopping','manage'), async 
   if(!key || key.length < 20 || key.includes('coloque'))
     return res.status(503).json({error:'Configure a chave Groq em Planejamento (ícone ⚙️) para usar reconhecimento por foto'});
   const b64 = photo.replace(/^data:image\/\w+;base64,/,'');
+  const prompt = 'Analise esta imagem de produto de supermercado. Retorne APENAS JSON válido (sem markdown): {"name":"nome genérico do produto em português","brand":"marca ou fabricante","category":"categoria","unit":"unidade"}. Categorias válidas (escolha a mais adequada): '+SHOP_CATS.join(', ')+'. Unidades válidas: un, kg, L, pacote, dúzia. Se não reconhecer, use valores genéricos.';
   try {
     const r = await fetch('https://api.groq.com/openai/v1/chat/completions',{
       method:'POST',
       headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'llama-3.2-11b-vision-preview',
+        model:'meta-llama/llama-4-scout-17b-16e-instruct',
         messages:[{role:'user',content:[
           {type:'image_url',image_url:{url:'data:image/jpeg;base64,'+b64}},
-          {type:'text',text:'Analise esta imagem de produto de supermercado. Retorne APENAS JSON válido (sem markdown): {"name":"nome genérico do produto em português","brand":"marca ou fabricante","category":"categoria","unit":"unidade"}. Categorias válidas (escolha a mais adequada): '+SHOP_CATS.join(', ')+'. Unidades válidas: un, kg, L, pacote, dúzia. Se não reconhecer, use valores genéricos.'}
+          {type:'text',text:prompt}
         ]}],
         max_tokens:300,temperature:0.1
       })
     });
     const data = await r.json();
-    if(!data.choices?.[0]?.message?.content) return res.status(500).json({error:'Resposta inesperada da IA'});
+    if(data.error) return res.status(500).json({error:'GROQ: '+data.error.message});
+    if(!data.choices?.[0]?.message?.content) return res.status(500).json({error:'Resposta vazia da IA'});
     const txt = data.choices[0].message.content.replace(/```(?:json)?\n?|\n?```/g,'').trim();
     const result = JSON.parse(txt);
     res.json({name:result.name||'',brand:result.brand||'',category:result.category||'',unit:result.unit||'un'});
