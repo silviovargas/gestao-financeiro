@@ -1,359 +1,714 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lista de Compras</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0F6E56">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="GF Ballet">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lista de Compras — Gestão Financeira SL</title>
+  <link rel="stylesheet" href="/css/global.css">
 <style>
-:root{--surface:#1b2430;--border:#2a3441;--text:#e8eef5;--muted:#9ca3af;--primary:#3b82f6;--success:#10b981;--danger:#ef4444}
-body{background:var(--surface);color:var(--text);font-family:-apple-system,sans-serif;margin:0}
-.wrap{max-width:1100px;margin:0 auto;padding:16px}
-.top{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:14px}
-h1{font-size:22px;margin:0}
-.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:16px}
-.tab{flex:1;padding:12px 4px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px}
-.tab.on{color:var(--text);border-bottom:2px solid var(--primary)}
-.btn{padding:10px 16px;border:none;border-radius:8px;cursor:pointer;font-size:14px;color:#fff;background:var(--primary)}
-.btn-ok{background:var(--success)}
-.btn-no{background:var(--danger)}
-.btn-line{background:transparent;color:var(--primary);border:1px solid var(--primary)}
-.btn-block{display:block;width:100%;margin-top:10px}
-.card{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:14px;margin:10px 0}
-input,select{width:100%;box-sizing:border-box;padding:10px;margin:6px 0;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px}
-table{width:100%;border-collapse:collapse;margin:12px 0}
-th,td{padding:8px 6px;border-bottom:1px solid var(--border);text-align:left;font-size:14px}
-.row{display:flex;justify-content:space-between;margin:4px 0}
-.tot{font-size:18px;font-weight:600;color:var(--success)}
-.muted{color:var(--muted);font-size:12px}
-.empty{text-align:center;color:var(--muted);padding:40px 10px}
-.res{max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:10px}
-.res-item{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--border)}
-.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;align-items:center;justify-content:center}
-.modal.on{display:flex}
-.box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;width:92%;max-width:460px;max-height:90vh;overflow-y:auto}
-.qtd{width:62px!important}
-.preco{width:84px!important}
+/* ── TABS ─────────────────────────────────────────────────── */
+.shop-tabs{display:flex;gap:2px;border-bottom:2px solid var(--border);margin-bottom:1.25rem;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.shop-tab{padding:10px 18px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--muted);cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;white-space:nowrap;transition:color .15s}
+.shop-tab:hover{color:var(--text)}
+.shop-tab.on{color:var(--primary);border-bottom-color:var(--primary);font-weight:600}
+
+/* ── PRODUTO CARD (catálogo) ─────────────────────────────── */
+.prod-card{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border);transition:background .12s}
+.prod-card:first-child{border-radius:var(--radius) var(--radius) 0 0}
+.prod-card:last-child{border-bottom:none;border-radius:0 0 var(--radius) var(--radius)}
+.prod-card:hover{background:var(--bg)}
+.prod-thumb{width:42px;height:42px;border-radius:8px;object-fit:cover;flex-shrink:0}
+.prod-icon{width:42px;height:42px;border-radius:8px;background:var(--primary-l);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px}
+.prod-info{flex:1;min-width:0}
+.prod-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prod-sub{font-size:11px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.prod-actions{display:flex;gap:4px;flex-shrink:0}
+
+/* ── CATEGORIA HEADER ────────────────────────────────────── */
+.cat-section{margin-bottom:6px}
+.cat-header{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.cat-body{border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius)}
+
+/* ── BUSCA / RESULTADO ──────────────────────────────────── */
+.res-list{border:1px solid var(--border);border-radius:var(--radius);margin-top:4px;overflow:hidden;max-height:260px;overflow-y:auto}
+.res-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border);transition:background .1s}
+.res-row:last-child{border-bottom:none}
+.res-row:hover{background:var(--bg)}
+.res-info{flex:1;min-width:0}
+.res-name{font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.res-meta{font-size:11px;color:var(--muted)}
+
+/* ── LISTA DE ITENS ──────────────────────────────────────── */
+.item-row{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);transition:background .12s}
+.item-row:last-child{border-bottom:none}
+.item-row.done{opacity:.55}
+.item-name{flex:1;min-width:0;font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item-cat{font-size:10px;color:var(--muted);display:block;margin-top:1px}
+.item-input{width:60px!important;padding:5px 6px!important;text-align:center;font-size:12px}
+
+/* ── TOTAIS ─────────────────────────────────────────────── */
+.total-bar{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--primary-l);border-radius:var(--radius);margin-top:8px}
+.total-label{font-size:12px;color:var(--primary);font-weight:600}
+.total-val{font-size:18px;font-weight:700;color:var(--primary)}
+
+/* ── FOTO AREA ───────────────────────────────────────────── */
+.foto-area{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px;border:2px dashed var(--border);border-radius:var(--radius);margin:4px 0 10px;cursor:pointer;transition:border-color .2s;text-align:center}
+.foto-area:hover{border-color:var(--primary);background:var(--primary-l)}
+.foto-area img{max-width:160px;max-height:120px;border-radius:8px;object-fit:contain;display:none}
+.rec-status{font-size:11px;color:var(--muted);text-align:center;min-height:16px;margin-bottom:4px}
+
+/* ── CHIP ────────────────────────────────────────────────── */
+.chip{display:inline-block;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:600}
+.chip-cat{background:var(--primary-l);color:var(--primary);border:1px solid var(--primary-b)}
+
+/* ── SPIN ────────────────────────────────────────────────── */
+.spin{display:inline-block;width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:4px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── CAMPO INLINE ────────────────────────────────────────── */
+.field{margin-bottom:.875rem}
+.field:last-child{margin-bottom:0}
+label.lbl{display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+
+/* ── EMPTY ───────────────────────────────────────────────── */
+.empty{text-align:center;color:var(--muted);padding:2.5rem 1rem;font-size:13px}
+
+/* ── RESPONSIVE ──────────────────────────────────────────── */
+@media(max-width:640px){
+  .page-body{padding:.875rem}
+  .item-input{width:50px!important}
+}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="top">
-    <h1>🛒 Lista de Compras</h1>
-    <a href="/" class="btn btn-line" style="text-decoration:none">← Voltar</a>
-  </div>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-content">
 
-  <div class="tabs">
-    <button class="tab on" id="t-listas"   onclick="aba('listas')">Minhas Listas</button>
-    <button class="tab"    id="t-mercados" onclick="aba('mercados')">Mercados</button>
-    <button class="tab"    id="t-historico" onclick="aba('historico')">Histórico</button>
-  </div>
+    <div class="page-header">
+      <h1>🛒 Lista de Compras</h1>
+    </div>
 
-  <div id="p-listas">
-    <button class="btn btn-ok" onclick="abrirModal('m-lista')">+ Nova Lista</button>
-    <button class="btn btn-ok" onclick="abrirModal('m-produto')">+ Novo Produto</button>
-    <div id="c-listas"></div>
-  </div>
+    <div class="page-body">
 
-  <div id="p-mercados" style="display:none">
-    <button class="btn btn-ok" onclick="abrirModal('m-mercado')">+ Novo Mercado</button>
-    <div id="c-mercados"></div>
-  </div>
+      <div class="shop-tabs">
+        <button class="shop-tab on" id="t-listas"   onclick="aba('listas')">Minhas Listas</button>
+        <button class="shop-tab"    id="t-catalogo" onclick="aba('catalogo')">Catálogo</button>
+        <button class="shop-tab"    id="t-mercados" onclick="aba('mercados')">Mercados</button>
+        <button class="shop-tab"    id="t-historico" onclick="aba('historico')">Histórico</button>
+      </div>
 
-  <div id="p-historico" style="display:none">
-    <div id="c-historico"></div>
+      <!-- ── LISTAS ─────────────────────────────────────────── -->
+      <div id="p-listas">
+        <div style="display:flex;gap:8px;margin-bottom:1rem">
+          <button class="btn btn-primary" onclick="abrirOverlay('o-lista')">+ Nova Lista</button>
+        </div>
+        <div id="c-listas"></div>
+      </div>
+
+      <!-- ── CATÁLOGO ───────────────────────────────────────── -->
+      <div id="p-catalogo" style="display:none">
+        <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="abrirModalProduto(null)">+ Novo Produto</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
+          <input id="cat-busca" type="text" placeholder="🔍 Buscar produto ou marca…" style="flex:1;min-width:140px" oninput="filtrarCatalogo()">
+          <select id="cat-filtro" style="flex:1;min-width:160px" onchange="filtrarCatalogo()">
+            <option value="">Todas as categorias</option>
+          </select>
+        </div>
+        <div id="c-catalogo"></div>
+      </div>
+
+      <!-- ── MERCADOS ───────────────────────────────────────── -->
+      <div id="p-mercados" style="display:none">
+        <div style="margin-bottom:1rem">
+          <button class="btn btn-primary" onclick="abrirOverlay('o-mercado')">+ Novo Mercado</button>
+        </div>
+        <div id="c-mercados"></div>
+      </div>
+
+      <!-- ── HISTÓRICO ──────────────────────────────────────── -->
+      <div id="p-historico" style="display:none">
+        <div id="c-historico"></div>
+      </div>
+
+    </div><!-- /page-body -->
+  </div><!-- /main-content -->
+</div><!-- /app-layout -->
+
+<!-- ══════════════════════════════════════════════════════ OVERLAYS -->
+
+<!-- Nova lista -->
+<div class="overlay" id="o-lista">
+  <div class="modal">
+    <h3>Nova Lista de Compras</h3>
+    <div class="field">
+      <label class="lbl">Mercado</label>
+      <select id="f-mercado"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="fecharOverlay('o-lista')">Cancelar</button>
+      <button class="btn btn-primary" onclick="criarLista()">Criar Lista</button>
+    </div>
   </div>
 </div>
 
-<!-- modal nova lista -->
-<div class="modal" id="m-lista"><div class="box">
-  <h2>Nova Lista</h2>
-  <select id="f-mercado"></select>
-  <button class="btn btn-ok btn-block" onclick="criarLista()">Criar</button>
-  <button class="btn btn-line btn-block" onclick="fecharModal('m-lista')">Cancelar</button>
-</div></div>
+<!-- Produto (criar / editar) -->
+<div class="overlay" id="o-produto">
+  <div class="modal">
+    <h3 id="prod-titulo">Novo Produto</h3>
 
-<!-- modal novo mercado -->
-<div class="modal" id="m-mercado"><div class="box">
-  <h2>Novo Mercado</h2>
-  <input id="f-mnome" placeholder="Nome">
-  <input id="f-mcidade" placeholder="Cidade (opcional)">
-  <button class="btn btn-ok btn-block" onclick="criarMercado()">Criar</button>
-  <button class="btn btn-line btn-block" onclick="fecharModal('m-mercado')">Cancelar</button>
-</div></div>
+    <div class="foto-area" id="foto-area" onclick="document.getElementById('input-foto').click()">
+      <img id="prod-foto-img" alt="foto do produto">
+      <div id="foto-ph">
+        <div style="font-size:26px;margin-bottom:4px">📷</div>
+        <div style="font-size:13px;font-weight:600;color:var(--primary)">Tirar foto para reconhecer</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">O sistema identifica nome, marca e categoria automaticamente</div>
+      </div>
+    </div>
+    <div class="rec-status" id="rec-status"></div>
+    <input type="file" id="input-foto" accept="image/*" capture="environment" style="display:none" onchange="processarFoto(this)">
 
-<!-- modal novo produto -->
-<div class="modal" id="m-produto"><div class="box">
-  <h2>Novo Produto</h2>
-  <input id="f-pnome" placeholder="Nome do produto">
-  <select id="f-punidade">
-    <option value="un">Unidade</option><option value="kg">Kg</option>
-    <option value="L">Litro</option><option value="pacote">Pacote</option>
-    <option value="dúzia">Dúzia</option>
-  </select>
-  <input id="f-pcategoria" placeholder="Categoria (ex: Mercearia)">
-  <button class="btn btn-ok btn-block" onclick="criarProduto()">Criar</button>
-  <button class="btn btn-line btn-block" onclick="fecharModal('m-produto')">Cancelar</button>
-</div></div>
+    <div class="field">
+      <label class="lbl">Nome do produto *</label>
+      <input id="f-pnome" type="text" placeholder="Ex: Arroz branco, Detergente, Shampoo">
+    </div>
+    <div class="field">
+      <label class="lbl">Marca / Fabricante</label>
+      <input id="f-pbrand" type="text" placeholder="Ex: Camil, Ypê, Seda (opcional)">
+    </div>
+    <div class="field-row" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="field">
+        <label class="lbl">Categoria</label>
+        <select id="f-pcategoria"><option value="">-- Selecione --</option></select>
+      </div>
+      <div class="field">
+        <label class="lbl">Unidade</label>
+        <select id="f-punidade">
+          <option value="un">Unidade (un)</option>
+          <option value="kg">Quilo (kg)</option>
+          <option value="L">Litro (L)</option>
+          <option value="pacote">Pacote</option>
+          <option value="dúzia">Dúzia</option>
+        </select>
+      </div>
+    </div>
 
-<!-- modal pagamento -->
-<div class="modal" id="m-pagar"><div class="box">
-  <h2>Confirmar Pagamento</h2>
-  <div class="muted" id="f-subtotal"></div>
-  <label class="muted">Valor final da compra (R$)</label>
-  <input type="number" step="0.01" id="f-valorfinal" oninput="recalcular()">
-  <label class="muted">Conta de débito</label>
-  <select id="f-conta"></select>
-  <label class="muted">Categoria</label>
-  <select id="f-categoria"></select>
-  <div class="tot" id="f-total" style="margin:14px 0"></div>
-  <button class="btn btn-ok btn-block" onclick="confirmarPagamento()">Pagar</button>
-  <button class="btn btn-line btn-block" onclick="fecharModal('m-pagar')">Cancelar</button>
-</div></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="fecharOverlay('o-produto')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-salvar-prod" onclick="salvarProduto()">Salvar Produto</button>
+    </div>
+  </div>
+</div>
+
+<!-- Novo mercado -->
+<div class="overlay" id="o-mercado">
+  <div class="modal">
+    <h3>Novo Mercado</h3>
+    <div class="field">
+      <label class="lbl">Nome</label>
+      <input id="f-mnome" type="text" placeholder="Ex: Carrefour, Extra, Atacadão">
+    </div>
+    <div class="field">
+      <label class="lbl">Cidade (opcional)</label>
+      <input id="f-mcidade" type="text" placeholder="Ex: São Paulo">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="fecharOverlay('o-mercado')">Cancelar</button>
+      <button class="btn btn-primary" onclick="criarMercado()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Pagamento -->
+<div class="overlay" id="o-pagar">
+  <div class="modal">
+    <h3>Confirmar Pagamento</h3>
+    <div class="field">
+      <label class="lbl">Valor final da compra (R$)</label>
+      <input type="number" step="0.01" id="f-valorfinal" oninput="recalcular()">
+      <div class="field-hint" id="f-subtotal"></div>
+    </div>
+    <div class="field">
+      <label class="lbl">Conta de débito</label>
+      <select id="f-conta"></select>
+    </div>
+    <div class="field">
+      <label class="lbl">Categoria financeira</label>
+      <select id="f-catfin"></select>
+    </div>
+    <div style="font-size:18px;font-weight:700;color:var(--primary);margin:10px 0" id="f-total"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="fecharOverlay('o-pagar')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarPagamento()">✅ Confirmar Pagamento</button>
+    </div>
+  </div>
+</div>
 
 <script src="/js/shared.js"></script>
 <script>
+// ─── Estado ──────────────────────────────────────────────────
 var listaAberta = null;
-var produtos = [];
-var pagto = { listId: null, subtotal: 0 };
+var todosProdutos = [];
+var catalogoCache = [];
+var prodEditId = null;
+var prodFotoB64 = null;
+var pagto = {listId:null, subtotal:0};
 
+// ─── Overlay helpers ─────────────────────────────────────────
+function abrirOverlay(id) { document.getElementById(id).classList.add('open'); }
+function fecharOverlay(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.overlay').forEach(function(o){
+  o.addEventListener('click', function(e){ if(e.target===o) o.classList.remove('open'); });
+});
+
+// ─── Abas ────────────────────────────────────────────────────
 function aba(nome) {
-  ['listas','mercados','historico'].forEach(function(n){
-    document.getElementById('p-'+n).style.display = (n===nome) ? 'block' : 'none';
-    document.getElementById('t-'+n).className = (n===nome) ? 'tab on' : 'tab';
+  ['listas','catalogo','mercados','historico'].forEach(function(n){
+    document.getElementById('p-'+n).style.display = (n===nome)?'block':'none';
+    document.getElementById('t-'+n).className = 'shop-tab'+(n===nome?' on':'');
   });
-  if (nome==='listas') carregarListas();
-  if (nome==='mercados') carregarMercados();
-  if (nome==='historico') carregarHistorico();
+  if(nome==='listas')    carregarListas();
+  if(nome==='catalogo')  carregarCatalogo();
+  if(nome==='mercados')  carregarMercados();
+  if(nome==='historico') carregarHistorico();
 }
 
-function abrirModal(id) {
-  if (id==='m-lista') {
-    API.get('/shop/markets').then(function(ms){
-      document.getElementById('f-mercado').innerHTML =
-        '<option value="">-- Escolha um mercado --</option>' +
-        ms.map(function(m){ return '<option value="'+m.id+'">'+m.name+'</option>'; }).join('');
-    });
-  }
-  document.getElementById(id).classList.add('on');
-}
-function fecharModal(id) { document.getElementById(id).classList.remove('on'); }
-
-/* ── LISTAS ── */
+// ══════════════════════════════════════════════════════════════
+// LISTAS
+// ══════════════════════════════════════════════════════════════
 async function carregarListas() {
   try {
     var todas = await API.get('/shop/lists');
     var aberta = todas.find(function(l){ return l.status==='open'; });
     if (!aberta) {
       listaAberta = null;
-      document.getElementById('c-listas').innerHTML = '<div class="empty">Nenhuma lista aberta. Crie uma nova!</div>';
+      document.getElementById('c-listas').innerHTML =
+        '<div class="empty">Nenhuma lista aberta.<br>Clique em <strong>+ Nova Lista</strong> para começar.</div>';
       return;
     }
     listaAberta = aberta.id;
     var det = await API.get('/shop/lists/'+aberta.id);
-    produtos = await API.get('/shop/products');
+    todosProdutos = await API.get('/shop/products');
     renderLista(det.list || aberta, det.items || []);
-  } catch(e) { alert('Erro ao carregar listas: '+e.message); }
+  } catch(e){ alert('Erro ao carregar listas: '+e.message); }
 }
 
 function renderLista(lista, items) {
   var nome = lista.market_name || 'Lista';
-  var html = '<div class="card"><h3>'+nome+'</h3>';
-  html += '<input id="f-busca" placeholder="Buscar produto para adicionar..." oninput="buscar()">';
-  html += '<div id="c-busca"></div>';
-  html += '<table><tr><th>Produto</th><th>Qtd</th><th>Preço</th><th>Subt.</th><th></th></tr>';
-  var subtotal = 0;
-  items.forEach(function(it){
-    var sub = (it.price||0)*(it.qty||1);
-    subtotal += sub;
-    html += '<tr>'
-      + '<td>'+it.name+'</td>'
-      + '<td><input class="qtd" type="number" value="'+(it.qty||1)+'" onchange="mudarItem('+it.id+',this.value,null)"></td>'
-      + '<td><input class="preco" type="number" step="0.01" placeholder="0.00" value="'+(it.price||'')+'" onchange="mudarItem('+it.id+',null,this.value)"></td>'
-      + '<td>R$ '+sub.toFixed(2)+'</td>'
-      + '<td><button class="btn" style="padding:5px 8px;font-size:12px" onclick="carrinho('+it.id+','+(it.in_cart?0:1)+')">'+(it.in_cart?'✓':'+')+' 🛒</button></td>'
-      + '</tr>';
-  });
-  html += '</table>';
-  var noCarrinho = items.filter(function(i){ return i.in_cart; });
-  var totalC = noCarrinho.reduce(function(s,it){ return s+(it.price||0)*(it.qty||1); },0);
-  html += '<div class="card">'
-    + '<div class="row"><span>Subtotal lista:</span><span>R$ '+subtotal.toFixed(2)+'</span></div>'
-    + '<div class="row"><span>No carrinho ('+noCarrinho.length+'):</span><span>R$ '+totalC.toFixed(2)+'</span></div>'
-    + '<div class="row tot"><span>TOTAL:</span><span>R$ '+totalC.toFixed(2)+'</span></div>'
-    + '<button class="btn btn-ok btn-block" onclick="abrirPagamento('+lista.id+','+totalC+')">💳 Pagar Agora</button>'
-    + '<button class="btn btn-no btn-block" onclick="excluirLista('+lista.id+', false)">Excluir Lista</button>'
-    + '</div></div>';
+  var html = '<div class="card" style="margin-bottom:1rem">'
+    + '<div class="card-header"><span class="card-title">🛍 '+nome+'</span></div>'
+    + '<div class="card-body" style="padding-bottom:0">'
+    + '<input type="text" id="f-busca" placeholder="🔍 Buscar produto para adicionar…" oninput="buscarNaLista()" style="margin-bottom:8px">'
+    + '<div id="c-busca"></div></div>';
+
+  if (!items.length) {
+    html += '<div class="empty" style="padding:1.5rem">Nenhum item ainda. Use a busca acima para adicionar.</div>';
+  } else {
+    var subtotal = 0;
+    html += '<div style="overflow-x:auto"><table><thead><tr>'
+      + '<th>Produto</th><th style="min-width:70px">Qtd</th><th style="min-width:90px">Preço R$</th><th>Subtotal</th><th></th>'
+      + '</tr></thead><tbody>';
+    items.forEach(function(it){
+      var sub = (it.price||0)*(it.qty||1);
+      subtotal += sub;
+      html += '<tr class="'+(it.in_cart?'done':'')+'">'
+        + '<td><div class="prod-name">'+it.name+'</div><span class="item-cat">'+(it.category||'')+'</span></td>'
+        + '<td><input class="item-input" type="number" min="0.1" step="0.1" value="'+(it.qty||1)+'" onchange="mudarItem('+it.id+',this.value,null)"></td>'
+        + '<td><input class="item-input" style="width:80px!important" type="number" step="0.01" placeholder="0,00" value="'+(it.price||'')+'" onchange="mudarItem('+it.id+',null,this.value)"></td>'
+        + '<td style="font-weight:500">R$ '+sub.toFixed(2)+'</td>'
+        + '<td><div style="display:flex;gap:4px">'
+        + '<button class="btn btn-icon btn-sm" onclick="carrinho('+it.id+','+(it.in_cart?0:1)+')" title="'+(it.in_cart?'Retirar do carrinho':'Colocar no carrinho')+'">'+(it.in_cart?'✓':'🛒')+'</button>'
+        + '<button class="btn btn-icon btn-sm" onclick="removerItem('+it.id+')" title="Remover">✕</button>'
+        + '</div></td></tr>';
+    });
+    html += '</tbody></table></div>';
+
+    var noCart = items.filter(function(i){ return i.in_cart; });
+    var totalCart = noCart.reduce(function(s,i){ return s+(i.price||0)*(i.qty||1); },0);
+    html += '<div style="padding:14px">'
+      + '<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:4px"><span>Total da lista:</span><span>R$ '+subtotal.toFixed(2)+'</span></div>'
+      + '<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:10px"><span>No carrinho ('+noCart.length+'):</span><span>R$ '+totalCart.toFixed(2)+'</span></div>'
+      + '<div class="total-bar"><span class="total-label">TOTAL A PAGAR</span><span class="total-val">R$ '+totalCart.toFixed(2)+'</span></div>'
+      + '<button class="btn btn-primary" style="width:100%;margin-top:10px;justify-content:center" onclick="abrirPagamento('+lista.id+','+totalCart+')">💳 Pagar Compra</button>'
+      + '</div>';
+  }
+
+  html += '<div style="padding:0 14px 14px"><button class="btn btn-danger" style="width:100%;justify-content:center" onclick="excluirLista('+lista.id+',false)">🗑 Excluir lista</button></div>';
+  html += '</div>';
   document.getElementById('c-listas').innerHTML = html;
 }
 
-function buscar() {
-  var q = document.getElementById('f-busca').value.toLowerCase();
+function buscarNaLista() {
+  var q = (document.getElementById('f-busca').value||'').toLowerCase().trim();
   var alvo = document.getElementById('c-busca');
   if (!q) { alvo.innerHTML=''; return; }
-  var achados = produtos.filter(function(p){
-    return p.name.toLowerCase().indexOf(q)>=0 || (p.category||'').toLowerCase().indexOf(q)>=0;
-  }).slice(0,30);
-  if (!achados.length) { alvo.innerHTML = '<div class="muted" style="padding:8px">Nenhum produto encontrado</div>'; return; }
-  alvo.innerHTML = '<div class="res">'+achados.map(function(p){
-    return '<div class="res-item"><div><strong>'+p.name+'</strong><br><span class="muted">'+(p.category||'')+' • '+(p.unit||'un')+'</span></div>'
-      + '<button class="btn btn-ok" style="padding:5px 10px;font-size:12px" onclick="addItem('+p.id+')">+ Add</button></div>';
+  var achados = todosProdutos.filter(function(p){
+    return p.name.toLowerCase().includes(q)||(p.brand||'').toLowerCase().includes(q)||(p.category||'').toLowerCase().includes(q);
+  }).slice(0,20);
+  if (!achados.length) {
+    alvo.innerHTML = '<div style="padding:8px 0;font-size:13px;color:var(--muted)">Nenhum produto encontrado. '
+      +'<button class="btn btn-secondary btn-sm" onclick="abrirModalProduto(null)" style="margin-left:6px">+ Criar produto</button></div>';
+    return;
+  }
+  alvo.innerHTML = '<div class="res-list">'+achados.map(function(p){
+    return '<div class="res-row"><div class="res-info"><div class="res-name">'+p.name+'</div>'
+      +'<div class="res-meta">'+(p.brand?p.brand+' · ':'')+''+(p.category||'')+' · '+(p.unit||'un')+'</div></div>'
+      +'<button class="btn btn-primary btn-sm" onclick="addItem('+p.id+')">+ Add</button></div>';
   }).join('')+'</div>';
 }
 
 async function addItem(pid) {
   if (!listaAberta) return;
   try {
-    await API.post('/shop/lists/'+listaAberta+'/items', {product_id: pid, qty: 1});
+    await API.post('/shop/lists/'+listaAberta+'/items', {product_id:pid, qty:1});
+    document.getElementById('f-busca').value='';
+    document.getElementById('c-busca').innerHTML='';
     carregarListas();
-  } catch(e) { alert('Erro ao adicionar: '+e.message); }
+  } catch(e){ alert('Erro: '+e.message); }
 }
 
 async function mudarItem(id, qty, price) {
-  var body = {};
-  if (qty   !== null && qty   !== '') body.qty   = parseFloat(qty);
-  if (price !== null && price !== '') body.price = parseFloat(price);
-  try { await API.put('/shop/list-items/'+id, body); carregarListas(); }
-  catch(e) { alert('Erro ao atualizar item: '+e.message); }
+  var body={};
+  if(qty!==null&&qty!=='') body.qty=parseFloat(qty);
+  if(price!==null&&price!=='') body.price=parseFloat(price);
+  try{ await API.put('/shop/list-items/'+id, body); carregarListas(); }
+  catch(e){ alert('Erro: '+e.message); }
 }
 
 async function carrinho(id, estado) {
-  try { await API.put('/shop/list-items/'+id, {in_cart: estado}); carregarListas(); }
-  catch(e) { alert('Erro no carrinho: '+e.message); }
+  try{ await API.put('/shop/list-items/'+id,{in_cart:estado}); carregarListas(); }
+  catch(e){ alert('Erro: '+e.message); }
+}
+
+async function removerItem(id) {
+  try{ await API.delete('/shop/list-items/'+id); carregarListas(); }
+  catch(e){ alert('Erro: '+e.message); }
 }
 
 async function criarLista() {
   var m = document.getElementById('f-mercado').value;
   if (!m) { alert('Escolha um mercado.'); return; }
-  try {
-    var r = await API.post('/shop/lists', {market_id: parseInt(m)});
+  try{
+    var r = await API.post('/shop/lists',{market_id:parseInt(m)});
     listaAberta = r.id;
-    fecharModal('m-lista');
+    fecharOverlay('o-lista');
     carregarListas();
-  } catch(e) { alert('Erro ao criar lista: '+e.message); }
+  } catch(e){ alert('Erro: '+e.message); }
 }
 
-/* ── PAGAMENTO ── */
+async function excluirLista(id, doHist) {
+  if (!confirm(doHist?'Excluir esta compra E o lançamento financeiro?':'Excluir esta lista?')) return;
+  try{
+    var det = await API.get('/shop/lists/'+id);
+    var lista = det.list||det;
+    if(lista.fin_transaction_id) try{ await API.delete('/finance/transactions/'+lista.fin_transaction_id); }catch(e2){}
+    await API.delete('/shop/lists/'+id);
+    if(doHist) carregarHistorico(); else carregarListas();
+  } catch(e){ alert('Erro: '+e.message); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// CATÁLOGO
+// ══════════════════════════════════════════════════════════════
+async function carregarCatalogo() {
+  try{
+    var cats = await API.get('/shop/categories');
+    var sel = document.getElementById('cat-filtro');
+    sel.innerHTML = '<option value="">Todas as categorias</option>';
+    cats.forEach(function(c){ sel.innerHTML += '<option value="'+c+'">'+c+'</option>'; });
+
+    catalogoCache = await API.get('/shop/products');
+    filtrarCatalogo();
+  } catch(e){ alert('Erro: '+e.message); }
+}
+
+function filtrarCatalogo() {
+  var q = (document.getElementById('cat-busca').value||'').toLowerCase().trim();
+  var cat = document.getElementById('cat-filtro').value;
+  var lista = catalogoCache.filter(function(p){
+    var mq = !q || p.name.toLowerCase().includes(q)||(p.brand||'').toLowerCase().includes(q);
+    var mc = !cat || p.category===cat;
+    return mq && mc;
+  });
+  renderCatalogo(lista);
+}
+
+function renderCatalogo(lista) {
+  var cont = document.getElementById('c-catalogo');
+  if (!lista.length) { cont.innerHTML='<div class="empty">Nenhum produto encontrado.</div>'; return; }
+
+  var icons = {
+    'Hortifruti':'🥦','Açougue e Peixaria':'🥩','Laticínios e Ovos':'🥛',
+    'Padaria':'🍞','Mantimentos':'🫙','Conservas':'🥫','Bebidas':'🧃',
+    'Limpeza':'🧹','Higiene Pessoal':'🧴','Utilitários':'🧻','Congelados':'🧊',
+    'Pet e Outros':'🐾','Sem categoria':'📦'
+  };
+
+  var porCat={};
+  lista.forEach(function(p){
+    var c=p.category||'Sem categoria';
+    if(!porCat[c]) porCat[c]=[];
+    porCat[c].push(p);
+  });
+
+  var html='';
+  Object.keys(porCat).sort().forEach(function(cat){
+    var prods=porCat[cat];
+    var ic=icons[cat]||'📦';
+    html+='<div class="cat-section">'
+      +'<div class="cat-header">'+ic+' '+cat
+      +' <span style="font-weight:400;margin-left:auto">'+prods.length+' produto'+(prods.length!==1?'s':'')+'</span></div>'
+      +'<div class="cat-body">';
+    prods.forEach(function(p){
+      html+='<div class="prod-card">';
+      if(p.photo) html+='<img class="prod-thumb" src="'+p.photo+'" alt="">';
+      else html+='<div class="prod-icon">'+ic+'</div>';
+      html+='<div class="prod-info"><div class="prod-name">'+p.name+'</div>'
+        +'<div class="prod-sub">'
+        +(p.brand?'<strong style="color:var(--text)">'+p.brand+'</strong>':'')
+        +'<span class="chip chip-cat">'+cat+'</span>'
+        +' <span>'+p.unit+'</span>'
+        +'</div></div>'
+        +'<div class="prod-actions">'
+        +'<button class="btn btn-icon btn-sm" onclick="abrirModalProduto('+JSON.stringify(p)+')" title="Editar">✏️</button>'
+        +'<button class="btn btn-icon btn-sm" onclick="excluirProduto('+p.id+',\''+p.name.replace(/'/g,"\\'")+'\')" title="Excluir">🗑</button>'
+        +'</div></div>';
+    });
+    html+='</div></div>';
+  });
+  cont.innerHTML=html;
+}
+
+function abrirModalProduto(prod) {
+  prodEditId = prod ? prod.id : null;
+  prodFotoB64 = null;
+  document.getElementById('prod-titulo').textContent = prod ? 'Editar Produto' : 'Novo Produto';
+  document.getElementById('f-pnome').value  = prod ? prod.name  : '';
+  document.getElementById('f-pbrand').value = prod ? (prod.brand||'') : '';
+  document.getElementById('f-punidade').value = prod ? (prod.unit||'un') : 'un';
+  document.getElementById('rec-status').textContent = '';
+
+  var img=document.getElementById('prod-foto-img');
+  var ph=document.getElementById('foto-ph');
+  if(prod&&prod.photo){ img.src=prod.photo; img.style.display='block'; ph.style.display='none'; }
+  else{ img.src=''; img.style.display='none'; ph.style.display='block'; }
+
+  API.get('/shop/categories').then(function(cats){
+    var sel=document.getElementById('f-pcategoria');
+    sel.innerHTML='<option value="">-- Selecione --</option>';
+    cats.forEach(function(c){ sel.innerHTML+='<option value="'+c+'"'+(prod&&prod.category===c?' selected':'')+'>'+c+'</option>'; });
+  });
+  abrirOverlay('o-produto');
+}
+
+async function salvarProduto() {
+  var nome=document.getElementById('f-pnome').value.trim();
+  if(!nome){ alert('Nome do produto é obrigatório.'); return; }
+  var btn=document.getElementById('btn-salvar-prod');
+  btn.disabled=true;
+  try{
+    var body={
+      name:nome,
+      brand:document.getElementById('f-pbrand').value.trim(),
+      category:document.getElementById('f-pcategoria').value,
+      unit:document.getElementById('f-punidade').value
+    };
+    var id;
+    if(prodEditId){ await API.put('/shop/products/'+prodEditId,body); id=prodEditId; }
+    else{ var r=await API.post('/shop/products',body); id=r.id; }
+    if(prodFotoB64) try{ await API.post('/shop/products/'+id+'/photo',{photo:prodFotoB64}); }catch(e2){}
+    fecharOverlay('o-produto');
+    catalogoCache=await API.get('/shop/products');
+    todosProdutos=catalogoCache;
+    filtrarCatalogo();
+  } catch(e){ alert('Erro ao salvar: '+e.message); }
+  finally{ btn.disabled=false; }
+}
+
+async function excluirProduto(id, nome) {
+  if(!confirm('Excluir o produto "'+nome+'"?')) return;
+  try{
+    await API.delete('/shop/products/'+id);
+    catalogoCache=catalogoCache.filter(function(p){ return p.id!==id; });
+    filtrarCatalogo();
+  } catch(e){ alert('Erro: '+e.message); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// RECONHECIMENTO POR FOTO
+// ══════════════════════════════════════════════════════════════
+function processarFoto(input) {
+  if(!input.files||!input.files[0]) return;
+  var status=document.getElementById('rec-status');
+  status.innerHTML='<span class="spin"></span> Processando imagem…';
+  var img=document.getElementById('prod-foto-img');
+  var ph=document.getElementById('foto-ph');
+
+  resizeImagem(input.files[0],800).then(function(b64){
+    img.src=b64; img.style.display='block'; ph.style.display='none';
+    prodFotoB64=b64;
+    status.innerHTML='<span class="spin"></span> Reconhecendo produto via IA…';
+    API.post('/shop/products/recognize',{photo:b64}).then(function(r){
+      if(r.name)  document.getElementById('f-pnome').value=r.name;
+      if(r.brand) document.getElementById('f-pbrand').value=r.brand;
+      if(r.unit){
+        var u=document.getElementById('f-punidade');
+        for(var i=0;i<u.options.length;i++) if(u.options[i].value===r.unit){u.selectedIndex=i;break;}
+      }
+      if(r.category){
+        var s=document.getElementById('f-pcategoria');
+        for(var i=0;i<s.options.length;i++) if(s.options[i].value===r.category){s.selectedIndex=i;break;}
+      }
+      status.textContent=r.name
+        ?'✅ Reconhecido! Confira os campos e ajuste se necessário.'
+        :'⚠️ Não foi possível identificar completamente. Preencha manualmente.';
+    }).catch(function(e){
+      status.textContent='⚠️ '+e.message;
+    });
+  });
+}
+
+function resizeImagem(file,maxSize) {
+  return new Promise(function(resolve){
+    var reader=new FileReader();
+    reader.onload=function(e){
+      var img=new Image();
+      img.onload=function(){
+        var w=img.width,h=img.height;
+        if(w>maxSize||h>maxSize){
+          if(w>h){h=Math.round(h*maxSize/w);w=maxSize;}
+          else{w=Math.round(w*maxSize/h);h=maxSize;}
+        }
+        var c=document.createElement('canvas');
+        c.width=w;c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(c.toDataURL('image/jpeg',0.82));
+      };
+      img.src=e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// PAGAMENTO
+// ══════════════════════════════════════════════════════════════
 async function abrirPagamento(listId, subtotal) {
-  try {
-    var contas = await API.get('/finance/accounts');
-    var cats = await API.get('/finance/categories');
-    document.getElementById('f-conta').innerHTML = '<option value="">-- Conta --</option>'
-      + contas.map(function(c){ return '<option value="'+c.id+'">'+c.name+'</option>'; }).join('');
-    document.getElementById('f-categoria').innerHTML = '<option value="">-- Categoria --</option>'
-      + cats.filter(function(c){ return c.type==='expense'; })
-            .map(function(c){ return '<option value="'+c.id+'">'+c.name+'</option>'; }).join('');
-    document.getElementById('f-subtotal').textContent = 'Subtotal calculado: R$ '+subtotal.toFixed(2);
-    document.getElementById('f-valorfinal').value = subtotal.toFixed(2);
-    document.getElementById('f-total').textContent = 'Valor final: R$ '+subtotal.toFixed(2);
-    pagto.listId = listId;
-    pagto.subtotal = subtotal;
-    abrirModal('m-pagar');
-  } catch(e) { alert('Erro ao abrir pagamento: '+e.message); }
+  try{
+    var contas=await API.get('/finance/accounts');
+    var cats=await API.get('/finance/categories');
+    document.getElementById('f-conta').innerHTML='<option value="">-- Conta --</option>'
+      +contas.map(function(c){ return '<option value="'+c.id+'">'+c.name+'</option>'; }).join('');
+    document.getElementById('f-catfin').innerHTML='<option value="">-- Categoria --</option>'
+      +cats.filter(function(c){ return c.type==='expense'; })
+           .map(function(c){ return '<option value="'+c.id+'">'+c.name+'</option>'; }).join('');
+    document.getElementById('f-subtotal').textContent='Subtotal calculado: R$ '+subtotal.toFixed(2);
+    document.getElementById('f-valorfinal').value=subtotal.toFixed(2);
+    document.getElementById('f-total').textContent='Valor final: R$ '+subtotal.toFixed(2);
+    pagto.listId=listId; pagto.subtotal=subtotal;
+    abrirOverlay('o-pagar');
+  } catch(e){ alert('Erro: '+e.message); }
 }
 
 function recalcular() {
-  var v = parseFloat(document.getElementById('f-valorfinal').value)||0;
-  document.getElementById('f-total').textContent = 'Valor final: R$ '+v.toFixed(2);
+  var v=parseFloat(document.getElementById('f-valorfinal').value)||0;
+  document.getElementById('f-total').textContent='Valor final: R$ '+v.toFixed(2);
 }
 
 async function confirmarPagamento() {
-  var acc = document.getElementById('f-conta').value;
-  var cat = document.getElementById('f-categoria').value;
-  var vf  = parseFloat(document.getElementById('f-valorfinal').value)||0;
-  if (!acc || !cat) { alert('Escolha a conta e a categoria.'); return; }
-  try {
-    await API.post('/shop/lists/'+pagto.listId+'/pay', {
-      account_id: parseInt(acc),
-      category_id: parseInt(cat),
-      discount: Math.max(0, pagto.subtotal - vf)
+  var acc=document.getElementById('f-conta').value;
+  var cat=document.getElementById('f-catfin').value;
+  var vf=parseFloat(document.getElementById('f-valorfinal').value)||0;
+  if(!acc||!cat){ alert('Escolha a conta e a categoria.'); return; }
+  try{
+    await API.post('/shop/lists/'+pagto.listId+'/pay',{
+      account_id:parseInt(acc),category_id:parseInt(cat),
+      discount:Math.max(0,pagto.subtotal-vf)
     });
-    fecharModal('m-pagar');
-    listaAberta = null;
+    fecharOverlay('o-pagar');
+    listaAberta=null;
     carregarListas();
-  } catch(e) { alert('Erro ao pagar: '+e.message); }
+  } catch(e){ alert('Erro: '+e.message); }
 }
 
-/* ── MERCADOS ── */
+// ══════════════════════════════════════════════════════════════
+// MERCADOS
+// ══════════════════════════════════════════════════════════════
 async function carregarMercados() {
-  try {
-    var ms = await API.get('/shop/markets');
-    if (!ms.length) { document.getElementById('c-mercados').innerHTML = '<div class="empty">Nenhum mercado</div>'; return; }
-    document.getElementById('c-mercados').innerHTML = ms.map(function(m){
-      return '<div class="card row" style="align-items:center"><div><strong>'+m.name+'</strong>'
-        + (m.city ? ' — '+m.city : '') + '</div>'
-        + '<button class="btn btn-no" onclick="excluirMercado('+m.id+')">X</button></div>';
-    }).join('');
-  } catch(e) { alert('Erro ao carregar mercados: '+e.message); }
-}
-
-async function excluirMercado(id) {
-  if (!confirm('Excluir este mercado?')) return;
-  try { await API.delete('/shop/markets/'+id); carregarMercados(); }
-  catch(e) { alert('Erro ao excluir mercado: '+e.message); }
+  try{
+    var ms=await API.get('/shop/markets');
+    if(!ms.length){ document.getElementById('c-mercados').innerHTML='<div class="empty">Nenhum mercado cadastrado.</div>'; return; }
+    document.getElementById('c-mercados').innerHTML='<div class="card"><div class="card-body" style="padding:0">'
+      +ms.map(function(m){
+        return '<div class="prod-card"><div class="prod-info"><div class="prod-name">'+m.name+'</div>'
+          +(m.city?'<div class="res-meta">'+m.city+'</div>':'')+'</div>'
+          +'<button class="btn btn-danger btn-sm" onclick="excluirMercado('+m.id+')">Excluir</button></div>';
+      }).join('')+'</div></div>';
+  } catch(e){ alert('Erro: '+e.message); }
 }
 
 async function criarMercado() {
-  var nome = document.getElementById('f-mnome').value.trim();
-  if (!nome) { alert('Nome obrigatório'); return; }
-  try {
-    await API.post('/shop/markets', {name: nome, city: document.getElementById('f-mcidade').value.trim()});
+  var nome=document.getElementById('f-mnome').value.trim();
+  if(!nome){ alert('Nome obrigatório'); return; }
+  try{
+    await API.post('/shop/markets',{name:nome,city:document.getElementById('f-mcidade').value.trim()});
     document.getElementById('f-mnome').value='';
     document.getElementById('f-mcidade').value='';
-    fecharModal('m-mercado');
+    fecharOverlay('o-mercado');
     carregarMercados();
-  } catch(e) { alert('Erro ao criar mercado: '+e.message); }
+  } catch(e){ alert('Erro: '+e.message); }
 }
 
-/* ── HISTÓRICO ── */
+async function excluirMercado(id) {
+  if(!confirm('Excluir este mercado?')) return;
+  try{ await API.delete('/shop/markets/'+id); carregarMercados(); }
+  catch(e){ alert('Erro: '+e.message); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// HISTÓRICO
+// ══════════════════════════════════════════════════════════════
 async function carregarHistorico() {
-  try {
-    var pagas = await API.get('/shop/lists?status=paid');
-    if (!pagas.length) { document.getElementById('c-historico').innerHTML = '<div class="empty">Sem compras lançadas</div>'; return; }
-    document.getElementById('c-historico').innerHTML = pagas.map(function(l){
-      return '<div class="card">'
-        + '<div><strong>'+(l.market_name||'Mercado')+'</strong> — '+l.date+'</div>'
-        + '<div class="tot" style="margin:6px 0">R$ '+(l.total||0).toFixed(2)+'</div>'
-        + '<button class="btn btn-no btn-block" onclick="excluirLista('+l.id+', true)">🗑 Excluir lista e lançamento</button>'
-        + '</div>';
-    }).join('');
-  } catch(e) { alert('Erro ao carregar histórico: '+e.message); }
+  try{
+    var pagas=await API.get('/shop/lists?status=paid');
+    if(!pagas.length){ document.getElementById('c-historico').innerHTML='<div class="empty">Nenhuma compra finalizada ainda.</div>'; return; }
+    document.getElementById('c-historico').innerHTML='<div class="card"><div class="card-body" style="padding:0">'
+      +pagas.map(function(l){
+        return '<div class="prod-card"><div class="prod-info"><div class="prod-name">'+(l.market_name||'Mercado')+'</div>'
+          +'<div class="res-meta">'+l.date+'</div></div>'
+          +'<div style="font-size:16px;font-weight:700;color:var(--primary);margin-right:8px">R$ '+(l.total||0).toFixed(2)+'</div>'
+          +'<button class="btn btn-danger btn-sm" onclick="excluirLista('+l.id+',true)">🗑</button></div>';
+      }).join('')+'</div></div>';
+  } catch(e){ alert('Erro: '+e.message); }
 }
 
-/* Excluir lista (aberta ou paga). Se paga, apaga também a transação financeira. */
-async function excluirLista(id, doHistorico) {
-  var msg = doHistorico ? 'Excluir esta compra E o lançamento no Financeiro?' : 'Excluir esta lista?';
-  if (!confirm(msg)) return;
-  try {
-    var det = await API.get('/shop/lists/'+id);
-    var lista = det.list || det;                       // rota retorna {list, items}
-    var txId = lista.fin_transaction_id;
-    if (txId) {
-      try { await API.delete('/finance/transactions/'+txId); }
-      catch(e2) { alert('Aviso: não consegui excluir o lançamento financeiro ('+e2.message+'). A lista será excluída mesmo assim.'); }
-    }
-    await API.delete('/shop/lists/'+id);
-    if (doHistorico) carregarHistorico(); else carregarListas();
-  } catch(e) { alert('Erro ao excluir: '+e.message); }
-}
-
-/* ── PRODUTOS ── */
-async function criarProduto() {
-  var nome = document.getElementById('f-pnome').value.trim();
-  if (!nome) { alert('Nome obrigatório'); return; }
-  try {
-    await API.post('/shop/products', {
-      name: nome,
-      unit: document.getElementById('f-punidade').value,
-      category: document.getElementById('f-pcategoria').value.trim()
+// ── Nova lista — preencher mercados ao abrir ─────────────────
+document.getElementById('o-lista').addEventListener('click', function(e){
+  if(e.target!==this) return;
+});
+var _origAbrir = abrirOverlay;
+abrirOverlay = function(id){
+  if(id==='o-lista'){
+    API.get('/shop/markets').then(function(ms){
+      document.getElementById('f-mercado').innerHTML=
+        '<option value="">-- Escolha o mercado --</option>'
+        +ms.map(function(m){ return '<option value="'+m.id+'">'+m.name+(m.city?' — '+m.city:'')+'</option>'; }).join('');
     });
-    document.getElementById('f-pnome').value='';
-    document.getElementById('f-pcategoria').value='';
-    fecharModal('m-produto');
-    produtos = await API.get('/shop/products');
-  } catch(e) { alert('Erro ao criar produto: '+e.message); }
-}
+  }
+  _origAbrir(id);
+};
 
-Auth.requireLogin();
+// ── Init ─────────────────────────────────────────────────────
+if(!Auth.requireLogin()) throw '';
+buildSidebar('compras');
 carregarListas();
 </script>
 </body>

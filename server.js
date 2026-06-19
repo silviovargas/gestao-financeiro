@@ -1249,6 +1249,21 @@ CREATE TABLE IF NOT EXISTS shop_price_history(
   price REAL, date TEXT, list_id INTEGER);
 `);
 
+// Migrações silenciosas
+try { db.prepare("ALTER TABLE shop_products ADD COLUMN brand TEXT").run(); } catch(e) {}
+
+// Categorias de compras (baseadas na lista IDEC)
+const SHOP_CATS = [
+  'Hortifruti','Açougue e Peixaria','Laticínios e Ovos',
+  'Padaria','Mantimentos','Conservas','Bebidas',
+  'Limpeza','Higiene Pessoal','Utilitários','Congelados','Pet e Outros'
+];
+
+// Remapear categorias antigas para o novo padrão
+{const _map={'Mercearia':'Mantimentos','Carnes e Aves':'Açougue e Peixaria',
+  'Frios e Laticínios':'Laticínios e Ovos','Higiene':'Higiene Pessoal','Pet/Outros':'Pet e Outros'};
+for(const[o,n] of Object.entries(_map)) db.prepare("UPDATE shop_products SET category=? WHERE category=?").run(n,o);}
+
 // Catálogo real (semeado só na 1a vez)
 if (db.prepare('SELECT COUNT(*) c FROM shop_products').get().c === 0) {
   const CAT = [
@@ -1322,17 +1337,19 @@ app.delete('/api/shop/markets/:id', auth, perm('shopping','manage'), (req,res) =
 app.get('/api/shop/products', auth, perm('shopping','view'), (req,res) =>
   res.json(db.prepare('SELECT * FROM shop_products WHERE active=1 ORDER BY category,name').all()));
 app.post('/api/shop/products', auth, perm('shopping','manage'), (req,res) => {
-  const {name,unit='un',category} = req.body; if(!name) return res.status(400).json({error:'Nome obrigatório'});
-  const id = db.prepare('INSERT INTO shop_products(name,unit,category) VALUES(?,?,?)').run(name,unit||'un',category||null).lastInsertRowid;
+  const {name,unit='un',category,brand} = req.body; if(!name) return res.status(400).json({error:'Nome obrigatório'});
+  const id = db.prepare('INSERT INTO shop_products(name,unit,category,brand) VALUES(?,?,?,?)').run(name,unit||'un',category||null,brand||null).lastInsertRowid;
   res.json({id});
 });
 app.put('/api/shop/products/:id', auth, perm('shopping','manage'), (req,res) => {
-  const {name,unit,category,active=1} = req.body;
-  db.prepare('UPDATE shop_products SET name=?,unit=?,category=?,active=? WHERE id=?').run(name,unit||'un',category||null,active?1:0,req.params.id);
+  const {name,unit,category,brand,active=1} = req.body;
+  db.prepare('UPDATE shop_products SET name=?,unit=?,category=?,brand=?,active=? WHERE id=?').run(name,unit||'un',category||null,brand||null,active?1:0,req.params.id);
   res.json({ok:1});
 });
 app.delete('/api/shop/products/:id', auth, perm('shopping','manage'), (req,res) => {
   db.prepare('UPDATE shop_products SET active=0 WHERE id=?').run(req.params.id); res.json({ok:1}); });
+// Categorias predefinidas
+app.get('/api/shop/categories', auth, perm('shopping','view'), (req,res) => res.json(SHOP_CATS));
 // Foto (cliente envia JPEG já redimensionado ~400px em base64)
 app.post('/api/shop/products/:id/photo', auth, perm('shopping','manage'), (req,res) => {
   const {photo} = req.body;
@@ -1344,6 +1361,37 @@ app.post('/api/shop/products/:id/photo', auth, perm('shopping','manage'), (req,r
   require('fs').writeFileSync(path.join(__dirname,'public',rel.slice(1)), Buffer.from(b64,'base64'));
   db.prepare('UPDATE shop_products SET photo=? WHERE id=?').run(rel,req.params.id);
   res.json({photo:rel});
+});
+// Reconhecimento de produto por foto via GROQ Vision
+app.post('/api/shop/products/recognize', auth, perm('shopping','manage'), async (req,res) => {
+  const {photo} = req.body;
+  if(!photo || !/^data:image\//.test(photo)) return res.status(400).json({error:'Imagem inválida'});
+  const setting = db.prepare("SELECT value FROM admin_settings WHERE key='groq_api_key'").get();
+  const key = setting?.value || process.env.GROQ_API_KEY;
+  if(!key || key.length < 20 || key.includes('coloque'))
+    return res.status(503).json({error:'Configure a chave Groq em Planejamento (ícone ⚙️) para usar reconhecimento por foto'});
+  const b64 = photo.replace(/^data:image\/\w+;base64,/,'');
+  try {
+    const r = await fetch('https://api.groq.com/openai/v1/chat/completions',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'llama-3.2-11b-vision-preview',
+        messages:[{role:'user',content:[
+          {type:'image_url',image_url:{url:'data:image/jpeg;base64,'+b64}},
+          {type:'text',text:'Analise esta imagem de produto de supermercado. Retorne APENAS JSON válido (sem markdown): {"name":"nome genérico do produto em português","brand":"marca ou fabricante","category":"categoria","unit":"unidade"}. Categorias válidas (escolha a mais adequada): '+SHOP_CATS.join(', ')+'. Unidades válidas: un, kg, L, pacote, dúzia. Se não reconhecer, use valores genéricos.'}
+        ]}],
+        max_tokens:300,temperature:0.1
+      })
+    });
+    const data = await r.json();
+    if(!data.choices?.[0]?.message?.content) return res.status(500).json({error:'Resposta inesperada da IA'});
+    const txt = data.choices[0].message.content.replace(/```(?:json)?\n?|\n?```/g,'').trim();
+    const result = JSON.parse(txt);
+    res.json({name:result.name||'',brand:result.brand||'',category:result.category||'',unit:result.unit||'un'});
+  } catch(e) {
+    res.status(500).json({error:'Reconhecimento falhou: '+e.message});
+  }
 });
 
 // Listas
